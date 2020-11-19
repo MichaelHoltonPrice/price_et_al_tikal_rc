@@ -5,6 +5,7 @@ library(baydem)
 library(evd)
 library(doParallel)
 library(foreach)
+library(MASS)
 registerDoParallel(detectCores())
 
 source("bayesian_radiocarbon_functions.R")
@@ -162,7 +163,7 @@ for (s in 1:S) {
   TH_local[s, ] <- sample_gm(hp)
 }
 
-identified <- foreach(s = 1:S, .combine = cbind) %dopar% {
+identified <- foreach(s = 1:S, .combine = cbind, .packages=c('baydem','MASS')) %dopar% {
   output <- is_identified(TH_local[s, ], M, tauVect, taumin, taumax)
 }
 

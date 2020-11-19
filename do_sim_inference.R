@@ -1,5 +1,6 @@
 library(baydem)
 library(magrittr)
+library(Bchron)
 
 ## Generate simulated data.
 # Sample sizes of the simulations
@@ -183,8 +184,6 @@ if (
     )
 }
 
-
-
 # Load the data.
 sim_inference <-
   "sim_inference.rds" %>%
@@ -196,7 +195,70 @@ sim_inference %<>%
   purrr::keep(function(x) x$hp$alpha_r == ((3 - 1) / 300)) %>%
   purrr::keep(function(x) x$n != 10)
 
+set.seed(416755)
+
 nplots <- length(sim_inference) + 1
+
+
+# The following function is based on:
+# https://github.com/andrewcparnell/Bchron/blob/master/R/BchronDensityFast.R
+#
+# The only difference is that in the call to mclust::densityMclust a one
+# dimensional variable/unequal variance model is used rather than letting the
+# model be chosen via the BIC. This ensures that this calculation most closely
+# mirrors the inference done with baydem.
+BchronDensityFast_modified <-
+function(ages,ageSds,calCurves,pathToCalCurves=system.file('data',package='Bchron'),dfs=rep(100,length(ages)),samples=2000,G=30) {
+
+if(length(ages)!=length(ageSds)) stop("ages and 1-sigma errors must be same length")
+if(length(ages)!=length(calCurves)) stop("ages and Calibration curves must be same length")
+  
+# Calibrate ages
+x = BchronCalibrate(ages=ages,ageSds=ageSds,calCurves=calCurves,pathToCalCurves=pathToCalCurves,dfs=rep(100,length(ages)))
+
+# Get number of dates
+n = length(x)
+
+# Get a huge load of samples from the posteriors here
+thetaBig = vector(length=n*samples)
+for(i in 1:n) thetaBig[((i-1)*samples+1):(i*samples)] = sample(x[[i]]$ageGrid,size=samples,prob=x[[i]]$densities,replace=TRUE)
+
+# Now run mclust
+mclustOutput = mclust::densityMclust(data = thetaBig,
+                                     G = G,
+                                     modelNames = 'V')
+
+output = list(out=mclustOutput,calAges=x)
+class(output) = 'BchronDensityRunFast'
+return(output)
+}
+
+do_BchronDensityFast_modified_fit <- function(sim,tau_bc,K) {
+  N <- nrow(sim$sim_dates)
+  bchronFit <- BchronDensityFast_modified(ages=round(sim$sim_dates$trc_m),ageSds=round(sim$sim_dates$sig_trc_m),calCurves=rep('intcal13',N),G=K)
+  f_bc <- rep(0,length(tau_bc))
+  for(k in 1:K) {
+    f_bc <- f_bc + bchronFit[[1]]$parameters$pro[k]*dnorm(1950-tau_bc,bchronFit[[1]]$parameters$mean[k],sqrt(bchronFit[[1]]$parameters$variance$sigmasq[k]))
+  }
+
+  return(list(tau_bc=tau_bc,f_bc=f_bc,bchronFit=bchronFit))
+}
+
+simData <- readRDS('sim_inference.rds')
+
+tau_bc <- sim_inference[[1]]$sim_output$anal$tau
+bc100   <- do_BchronDensityFast_modified_fit(simData[[2]],tau_bc,2)
+bc1000  <- do_BchronDensityFast_modified_fit(simData[[3]],tau_bc,2)
+bc10000 <- do_BchronDensityFast_modified_fit(simData[[4]],tau_bc,2)
+
+# Add the BchronDensityFast_modified fits to sim_inference
+sim_inference[[1]]$tau_bc <- bc100$tau_bc
+sim_inference[[1]]$f_bc   <- bc100$f_bc
+sim_inference[[2]]$tau_bc <- bc1000$tau_bc
+sim_inference[[2]]$f_bc   <- bc1000$f_bc
+sim_inference[[3]]$tau_bc <- bc10000$tau_bc
+sim_inference[[3]]$f_bc   <- bc10000$f_bc
+
 # Generate a 4 x 1 graph figure summarizing the simulation results
 pdf(here::here("Fig1_sim_inference.pdf"), width = 5, height = 2.5 * nplots)
 
@@ -245,6 +307,12 @@ sim_inference %>%
       lwd = 2,
       add = T,
       col = "black"
+    )
+
+    lines(x$tau_bc,x$f_bc,
+      lwd = 2,
+      col = "black",
+      lty=3
     )
 
     bd_plot_50_percent_quantile(x$sim_output$anal,

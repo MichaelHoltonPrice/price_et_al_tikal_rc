@@ -42,6 +42,7 @@ install.packages("devtools")
 devtools::install_github('eehh-stanford/baydem')
 
 # If necessary, install additional package dependencies:
+install.packages('Bchron')
 install.packages('dplyr')
 install.packages('here')
 install.packages('magrittr')

@@ -143,8 +143,8 @@ calcPerturbMatGaussMix <- function(tau, th, taumin = NA, taumax = NA) {
 # function of the fraction modern, which is equivalent to checking the
 # size of the null space of M %*% P.
 is_identified <- function(th, M, tau, taumin = NA, taumax = NA) {
-  P <- calcPerturbMatGaussMix(tau, th, taumin, taumax)
-  N <- MASS::Null(t(M %*% P))
+  P <- calcPerturbMatGaussMix(tau, th, taumin, taumax) # baydem package
+  N <- Null(t(M %*% P)) # MASS package
   return(ncol(N) == 0)
 }
 
@@ -203,4 +203,38 @@ calc_meas_matrix2 <- function(tau, phi_m, sig_m, calibDf, addCalibUnc = T) {
   dtau <- tau[2] - tau[1]
   M <- M * dtau
   return(M)
+}
+
+# The following function is based on:
+# https://github.com/andrewcparnell/Bchron/blob/master/R/BchronDensityFast.R
+#
+# The only difference is that in the call to mclust::densityMclust a one
+# dimensional variable/unequal variance model is used rather than letting the
+# model be chosen via the BIC. This ensures that this calculation most closely
+# mirrors the inference done with baydem.
+BchronDensityFast_modified <-
+function(ages,ageSds,calCurves,pathToCalCurves=system.file('data',package='Bchron'),dfs=rep(100,length(ages)),samples=2000,G=30) {
+
+if(length(ages)!=length(ageSds)) stop("ages and 1-sigma errors must be same length")
+if(length(ages)!=length(calCurves)) stop("ages and Calibration curves must be same length")
+  
+# Calibrate ages
+x = BchronCalibrate(ages=ages,ageSds=ageSds,calCurves=calCurves,pathToCalCurves=pathToCalCurves,dfs=rep(100,length(ages)))
+
+# Get number of dates
+n = length(x)
+
+# Get a huge load of samples from the posteriors here
+thetaBig = vector(length=n*samples)
+for(i in 1:n) thetaBig[((i-1)*samples+1):(i*samples)] = sample(x[[i]]$ageGrid,size=samples,prob=x[[i]]$densities,replace=TRUE)
+
+# Now run mclust
+mclustOutput = mclust::densityMclust(data = thetaBig,
+                                     G = G,
+                                     modelNames = 'V')
+
+output = list(out=mclustOutput,calAges=x)
+class(output) = 'BchronDensityRunFast'
+return(output)
+  
 }
