@@ -67,6 +67,7 @@ install.packages('magrittr')
 install.packages('purrr')
 install.packages('readr')
 install.packages('readxl')
+install.packages('rcarbon')
 install.packages('tibble')
 ```
 
@@ -85,6 +86,7 @@ When baydem is installed, so is Rstan, which may have further depenencies. If so
     + create_identif_results_gm.R  
     + do_maya_inference.R  
     + do_sim_inference.R  
+    + make_bayesian_radiocarbon_illustrations.R
 * License and README files:
     + LICENSE.md
     + README.md
@@ -166,3 +168,17 @@ This will take a few hours to run. Once complete, the following new file is crea
 * FigS2_gm_example.pdf  
 
 FigS2_exp_example.pdf is Figure S2 in the supplement. Information about the identifiability checks is printed out in R as the script runs.
+
+## Bayesian radiocarbon illustrations
+If necessary, set the R working directory to the directory with the files (e.g., using setwd). Type:
+
+``` r
+source('make_bayesian_radiocarbon_illustrations.R')
+```
+
+# TODO: update figure numbering
+This should take only a few seconds to run. Once complete, the following new file is created:  
+
+* FigS1_exp_example.pdf  
+
+Fig1_single_date_calibration.pdf is Figure 1 in the main text.

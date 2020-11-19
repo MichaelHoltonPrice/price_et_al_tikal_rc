@@ -8,12 +8,12 @@ This repository contains the data and code for our paper:
 > Price, M.H., J.M. Capriles, J. Hoggarth, R.K. Bocinsky, C.E. Ebert, and J.H. Jones, (2020). *End-to-end Bayesian analysis of 14C dates as an alternative to summed probability densities*. In review.
 
 <!-- Our pre-print is online here: -->
-<!-- > Authors, (YYYY). _End-to-end Bayesian analysis of 14C dates as an alternative to summed probability densities_. Name of journal/book, Accessed 18 Nov 2020. Online at <https://doi.org/xxx/xxx> -->
+<!-- > Authors, (YYYY). _End-to-end Bayesian analysis of 14C dates as an alternative to summed probability densities_. Name of journal/book, Accessed 19 Nov 2020. Online at <https://doi.org/xxx/xxx> -->
 ### How to cite
 
 Please cite this compendium as:
 
-> Price, M.H., J.M. Capriles, J. Hoggarth, R.K. Bocinsky, C.E. Ebert, and J.H. Jones, (2020). *Compendium of R code and data for End-to-end Bayesian analysis of 14C dates as an alternative to summed probability densities*. Accessed 18 Nov 2020.
+> Price, M.H., J.M. Capriles, J. Hoggarth, R.K. Bocinsky, C.E. Ebert, and J.H. Jones, (2020). *Compendium of R code and data for End-to-end Bayesian analysis of 14C dates as an alternative to summed probability densities*. Accessed 19 Nov 2020.
 
 Getting the code and input data
 -------------------------------
@@ -49,6 +49,7 @@ install.packages('magrittr')
 install.packages('purrr')
 install.packages('readr')
 install.packages('readxl')
+install.packages('rcarbon')
 install.packages('tibble')
 ```
 
@@ -68,6 +69,7 @@ Contents
     -   create\_identif\_results\_gm.R
     -   do\_maya\_inference.R
     -   do\_sim\_inference.R
+    -   make\_bayesian\_radiocarbon\_illustrations.R
 -   License and README files:
     -   LICENSE.md
     -   README.md
@@ -157,3 +159,21 @@ This will take a few hours to run. Once complete, the following new file is crea
 -   FigS2\_gm\_example.pdf
 
 FigS2\_exp\_example.pdf is Figure S2 in the supplement. Information about the identifiability checks is printed out in R as the script runs.
+
+Bayesian radiocarbon illustrations
+----------------------------------
+
+If necessary, set the R working directory to the directory with the files (e.g., using setwd). Type:
+
+``` r
+source('make_bayesian_radiocarbon_illustrations.R')
+```
+
+TODO: update figure numbering
+=============================
+
+This should take only a few seconds to run. Once complete, the following new file is created:
+
+-   FigS1\_exp\_example.pdf
+
+Fig1\_single\_date\_calibration.pdf is Figure 1 in the main text.
