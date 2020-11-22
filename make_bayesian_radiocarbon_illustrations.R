@@ -10,8 +10,8 @@ library(rcarbon)
 
 
 
-# The date to be calibrated, about 900 AD
-t_m   <- 1950 - 900 # The uncalibrated radiocarbon date in years before present
+# The date to be calibrated, about 833 AD
+t_m   <- 1950 - 830 # The uncalibrated radiocarbon date in years before present
 sig_t_m <- 20       # The uncertainty of the measurement (20 "years")
 
 # Do the calibration in rcarbon
