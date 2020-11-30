@@ -5,15 +5,15 @@ price\_et\_al\_tikal\_rc
 
 This repository contains the data and code for our paper:
 
-> Price, M.H., J.M. Capriles, J. Hoggarth, R.K. Bocinsky, C.E. Ebert, and J.H. Jones, (2020). *End-to-end Bayesian analysis of 14C dates as an alternative to summed probability densities*. In review.
+> Price, M.H., J.M. Capriles, J. Hoggarth, R.K. Bocinsky, C.E. Ebert, and J.H. Jones, (2020). *End-to-end Bayesian analysis for summarizing sets of radiocarbon dates*. In review.
 
 <!-- Our pre-print is online here: -->
-<!-- > Authors, (YYYY). _End-to-end Bayesian analysis of 14C dates as an alternative to summed probability densities_. Name of journal/book, Accessed 19 Nov 2020. Online at <https://doi.org/xxx/xxx> -->
+<!-- > Authors, (YYYY). _End-to-end Bayesian analysis for summarizing sets of radiocarbon dates_. Name of journal/book, Accessed 30 Nov 2020. Online at <https://doi.org/xxx/xxx> -->
 ### How to cite
 
 Please cite this compendium as:
 
-> Price, M.H., J.M. Capriles, J. Hoggarth, R.K. Bocinsky, C.E. Ebert, and J.H. Jones, (2020). *Compendium of R code and data for End-to-end Bayesian analysis of 14C dates as an alternative to summed probability densities*. Accessed 19 Nov 2020.
+> Price, M.H., J.M. Capriles, J. Hoggarth, R.K. Bocinsky, C.E. Ebert, and J.H. Jones, (2020). *Compendium of R code and data for End-to-end Bayesian analysis for summarizing sets of radiocarbon dates*. Accessed 30 Nov 2020.
 
 Getting the code and input data
 -------------------------------
@@ -61,7 +61,7 @@ Contents
 --------
 
 -   Input data files:
-    -   MesoRAD-v.1.1\_FINAL\_no\_locations.xlsx
+    -   MesoRAD-v.1.2\_no\_locations.xlsx
     -   Tikal\_Demography.xlsx
 -   R files:
     -   bayesian\_radiocarbon\_functions.R
@@ -87,12 +87,21 @@ If necessary, set the R working directory to the directory with the files (e.g.,
 source('do_sim_inference.R')
 ```
 
-This should take a few hours to finish. Once complete, the following new files are created:
+This should take a few hours to finish. Once complete, the following ten files are created:
 
--   sim\_inference.rds
 -   Fig1\_sim\_inference.pdf
+-   sim\_data.rds
+-   sim\_soln\_100.rds
+-   sim\_soln\_1000.rds
+-   sim\_soln\_10000.rds
+-   sim\_anal\_100.rds
+-   sim\_anal\_1000.rds
+-   sim\_anal\_10000.rds
+-   sim\_bc\_100.rds
+-   sim\_bc\_1000.rds
+-   sim\_bc\_10000.rds
 
-sim\_inference.rds stores the results of the Bayesian inference for N=10, 100, 1000,and 10000 simulated radiocarbon samples and two choices for the paramaterization of the prior (a total of eight cases). Fig1\_sim\_inference.pdf is Figure 1 in the article.
+Fig1\_sim\_inference.pdf is for Figure 1 in the article. sim\_data.rds stores simulated samples. For N=100, N=1000, and N=10000, sim\_soln\*, sim\_anal\*, and sim\_bc\* store, respectively, the results (samples) of Bayesian inference, analyses based on the Bayesian inference, and results of the BchronDensityFast fits.
 
 Maya results
 ------------
@@ -103,7 +112,7 @@ If necessary, set the R working directory to the directory with the files (e.g.,
 source('do_maya_inference.R')
 ```
 
-This should take about two days to finish. Once complete, the following new files are created:
+This may take a day or more to finish. Once complete, the following new files are created:
 
 -   Mesorad files
     -   log\_mesorad\_hygiene\_counts.csv
@@ -123,9 +132,9 @@ This should take about two days to finish. Once complete, the following new file
     -   maya\_inference\_K8\_all.rds
     -   maya\_inference\_K10\_all.rds
 -   Figures and count data
-    -   Fig2\_maya\_inference\_K10.pdf
-    -   Fig3\_tikal\_prev\_expert\_comparison.pdf
-    -   Fig4\_maya\_histograms.pdf
+    -   Fig3\_maya\_inference\_K10.pdf
+    -   Fig4\_tikal\_prev\_expert\_comparison.pdf
+    -   Fig5\_maya\_histograms.pdf
     -   FigS3\_maya\_inference\_Kall.pdf
     -   FigS4\_maya\_inference\_K2\_and\_K10\_with\_rc\_curve.pdf
     -   supp\_count\_data.csv
@@ -168,9 +177,6 @@ If necessary, set the R working directory to the directory with the files (e.g.,
 ``` r
 source('make_bayesian_radiocarbon_illustrations.R')
 ```
-
-TODO: update figure numbering
-=============================
 
 This should take only a few seconds to run. Once complete, the following new file is created:
 

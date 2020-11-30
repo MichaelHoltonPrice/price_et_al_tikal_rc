@@ -3,8 +3,6 @@ library(magrittr)
 library(Bchron)
 
 ## Generate simulated data.
-# Sample sizes of the simulations
-sim_samp <- c(10, 100, 1000, 10000)
 
 # The simulation distribution: a Gaussian mixture with ordering pi1, pi2, mu1,
 # mu2, sig1, sig2
@@ -27,11 +25,8 @@ hp <-
     alpha_d = 1,
     # The gamma distribution shape parameter for sigma
     alpha_s = 3,
-    # The gamma distribution rate parameter for sigma, yielding a mode of 100 or 300, respectively
-    alpha_r = list(
-      (3 - 1) / 100,
-      (3 - 1) / 300
-    ),
+    # The gamma distribution rate parameter for sigma, yielding a mode of 50
+    alpha_r = (3 - 1) / 50,
     # Minimum calendar date (years BC/AD)
     taumin = 600,
     # Maximum calendar date (years BC/AD)
@@ -40,23 +35,27 @@ hp <-
     dtau = 1,
     # Number of mixtures
     K = 2
-  ) %>%
-  purrr::cross()
+  )
 
-# Generate the largest sample;
-# We'll subset this in the function below, simulating
-# the process of retrieving more radiocarbon dates
-# Set the random number seed (seed from random.org)
-set.seed(806372)
-sim_dates <-
+# Either load or generate a sample of 10,000 simulated observations
+sim_data_file <- 'sim_data.rds'
+if(file.exists(sim_data_file)) {
+  sim_data <- readRDS(sim_data_file)
+} else {
+  # For reproducibility, set the random number seed (from random.org between
+  # 0 and 1,000,000)
+  set.seed(999959)
+  
+  # The following piping first samples for the true calendar dates of the
+  # samples using bd_sample_gauss_mix, then, for each calendar date, simulates
+  # the radiocarbon measurement process by calling bd_draw_rc_meas_using_date.
+  sim_data <-
   tibble::tibble(
     date_AD = baydem::bd_sample_gauss_mix(
-      # A really large number of samples from which to draw the
-      # test datasets, in case someone wants to run more than 10,000
-      N = 100000,
+      N = 10000,
       th = th_sim,
-      taumin = hp[[1]]$taumin,
-      taumax = hp[[1]]$taumax
+      taumin = hp$taumin,
+      taumax = hp$taumax
     )
   ) %>%
   dplyr::bind_cols(
@@ -65,7 +64,7 @@ sim_dates <-
       t_e = .$date_AD,
 
       # Load the calibration data frame by calling bd_load_calib_curve
-      calibDf = bd_load_calib_curve("intcal13"),
+      calibDf = bd_load_calib_curve("intcal20"),
 
       # For simulating radiocarbon measurements, a draw is made for the standard
       # deviation of the fraction modern from a uniform density on the interval 0.0021
@@ -79,126 +78,98 @@ sim_dates <-
       tibble::as_tibble()
   )
 
-sim_inference <-
-  sim_samp %>%
-  magrittr::set_names(., .) %>%
-  as.list() %>%
-  purrr::cross2(hp) %>%
-  purrr::map(function(x) {
-    x %<>%
-      magrittr::set_names(c("n", "hp"))
-
-    x$sim_dates <- sim_dates[1:x$n, ]
-
-    x
-  })
-
-# If simulated data exists for runs, load it. If are missing for any run, generate
-# new data for all runs.
-# Doing inference involves three steps:
-#
-# (1) Generate the problem
-# (2) Do the Bayesian sampling
-# (3) Run some standard analyses
-out_file <- here::here("sim_inference.rds")
-
-if (
-  !file.exists(out_file) ||
-    !identical(
-      out_file %>%
-        readr::read_rds() %>%
-        purrr::map(magrittr::extract, c("n", "hp", "sim_dates")),
-      sim_inference
-    )
-) {
-  if (file.exists(out_file)) {
-    saved_results <-
-      out_file %>%
-      readr::read_rds() %>%
-      purrr::map(magrittr::extract, c("n", "hp", "sim_dates"))
-
-    sim_inference %<>%
-      setdiff(saved_results)
-  }
-
-  sim_inference %<>%
-    purrr::map(
-      function(x) {
-        prob <-
-          list(
-            phi_m = x$sim_dates$phi_m,
-            sig_m = x$sim_dates$sig_m,
-            hp = x$hp,
-            calibDf = bd_load_calib_curve("intcal13"),
-            # Define the control parameters for the call to Stan. Use 4500 total MCMC
-            # samples, of which 2000 are warmup samples. Since four chains are used, this
-            # yields 4*(4500-2000) = 10,000 total samples.
-            control = list(
-              sampsPerChain = 4500,
-              warmup = 2000
-            )
-          )
-
-        soln <-
-          baydem::bd_do_inference(prob)
-
-        anal <-
-          baydem::bd_analyze_soln(
-            soln = soln,
-            th_sim = th_sim
-          )
-
-        x$sim_output <-
-          tibble::lst(
-            prob,
-            soln,
-            anal
-          )
-
-        return(x)
-      }
-    )
-
-  if (file.exists(out_file)) {
-    saved_results <-
-      out_file %>%
-      readr::read_rds()
-
-    # Discard whatever results were just calculated
-    saved_results %<>%
-      purrr::discard(saved_results %>%
-        purrr::map(magrittr::extract, c("n", "hp", "sim_dates")) %>%
-        magrittr::is_in(sim_inference %>%
-          purrr::map(magrittr::extract, c("n", "hp", "sim_dates"))))
-
-    sim_inference <- base::union(
-      saved_results,
-      sim_inference
-    )
-  }
-
-  # Save the full result set
-  sim_inference %>%
-    readr::write_rds(out_file,
-      compress = "gz"
-    )
+  saveRDS(sim_data,sim_data_file)
 }
 
-# Load the data.
-sim_inference <-
-  "sim_inference.rds" %>%
-  here::here() %>%
-  readr::read_rds()
+# If necessary, do the inference for each case of N=100, N=1000, and N=10000.
+# This involves :
+#
+# (1) Generating the problem
+# (2) Doing the Bayesian inference (sampling from the posterior distribution)
+# (3) Running some standard analyses.
+#
+# Where possible (if the pertinent calculation has already been done), results
+# are loaded from file, with checks made on the validity of saved results. 
+
+# To ensure reproducibility, explicitly set the random number seeds used to
+# initialize the sampling and by Stan (seeds from random.org between 1 and
+# 1,000,000).
+Nvect        <- c(   100,  1000, 10000) # Number of samples for each run
+initSeedVect <- c(945814,369420,791667) # Initialization seed (see bd_do_inference)
+stanSeedVect <- c(306928,973096, 25406) # Stan seed (see bd_do_inference)
+
+# Iterate over "runs", storing the inference result in the list sim_soln and the
+# analyses that use the solutions in the list sim_anal.
+sim_soln <- list()
+sim_anal <- list()
+
+for(r in 1:length(Nvect)) {
+  N <- Nvect[r] # Number of samples for this "run"
+
+  # If necessary, build the problem and do the inference
+  sim_soln_file <- paste0('sim_soln_',N,'.rds')
+  if(file.exists(sim_soln_file)) {
+    # Since the inference file exists, load it from file
+    sim_soln[[length(sim_soln) + 1]] <- readRDS(sim_soln_file)
+
+    # Check the dimensions and random number seeds for this simulation "run"
+    if(length(sim_soln[[length(sim_soln)]]$prob$phi_m) != N) {
+      stop('Wrong length for phi_m in solution read from file')
+    }
+    
+    if(sim_soln[[length(sim_soln)]]$prob$control$initSeed != initSeedVect[r]) {
+      stop('Wrong initSeed in solution read from file')
+    }
+    
+    if(sim_soln[[length(sim_soln)]]$prob$control$stanSeed != stanSeedVect[r]) {
+      stop('Wrong stanSeed in solution read from file')
+    }
+
+  } else {
+    # Since the inference file does not exist, do the inference and save it to
+    # file
+
+    # Specify the problem as a list in the format expected by bd_do_inference
+    prob <-
+        list(
+          phi_m = sim_data$phi_m[1:N],
+          sig_m = sim_data$sig_m[1:N],
+          hp = hp,
+          calibDf = bd_load_calib_curve("intcal20"),
+          # Define the control parameters for the call to Stan. Use 4500 total MCMC
+          # samples, of which 2000 are warmup samples. Since four chains are used, this
+          # yields 4*(4500-2000) = 10,000 total samples.
+          control = list(
+            sampsPerChain = 4500,
+            warmup = 2000,
+            initSeed = initSeedVect[r],
+            stanSeed = stanSeedVect[r]
+          )
+        )
+  
+     sim_soln[[length(sim_soln) + 1]] <- baydem::bd_do_inference(prob)
+     saveRDS(sim_soln[[length(sim_soln)]],sim_soln_file)
+  }
+
+  # If necessary, call bd_analyze_soln do some standard analyses on the
+  # posterior samples.
+  sim_anal_file <- paste0('sim_anal_',N,'.rds')
+  if(file.exists(sim_anal_file)) {
+    # Since the analysis file exists, load it from file
+    sim_anal[[length(sim_anal) + 1]] <- readRDS(sim_anal_file)
+  } else {
+    # Since the analysis file does not exist, do the analysis and save it to
+    # file
+    sim_anal[[length(sim_anal) + 1]] <- baydem::bd_analyze_soln(sim_soln[[length(sim_soln)]],th_sim=th_sim)
+    saveRDS(sim_anal[[length(sim_anal)]],sim_anal_file)
+  }
+}
 
 #### Make Simulated Plots ####
-sim_inference %<>%
-  purrr::keep(function(x) x$hp$alpha_r == ((3 - 1) / 300)) %>%
-  purrr::keep(function(x) x$n != 10)
 
 set.seed(416755)
 
-nplots <- length(sim_inference) + 1
-
+nplots <- length(sim_soln) + 1 # four plots total
 
 # The following function is based on:
 # https://github.com/andrewcparnell/Bchron/blob/master/R/BchronDensityFast.R
@@ -233,34 +204,35 @@ class(output) = 'BchronDensityRunFast'
 return(output)
 }
 
-do_BchronDensityFast_modified_fit <- function(sim,tau_bc,K) {
-  N <- nrow(sim$sim_dates)
-  bchronFit <- BchronDensityFast_modified(ages=round(sim$sim_dates$trc_m),ageSds=round(sim$sim_dates$sig_trc_m),calCurves=rep('intcal13',N),G=K)
-  f_bc <- rep(0,length(tau_bc))
+do_BchronDensityFast_modified_fit <- function(sim_data,N,tau,K) {
+  bchronFit <- BchronDensityFast_modified(ages=round(sim_data$trc_m[1:N]),ageSds=round(sim_data$sig_trc_m[1:N]),calCurves=rep('intcal20',N),G=K)
+  f_bc <- rep(0,length(tau))
   for(k in 1:K) {
-    f_bc <- f_bc + bchronFit[[1]]$parameters$pro[k]*dnorm(1950-tau_bc,bchronFit[[1]]$parameters$mean[k],sqrt(bchronFit[[1]]$parameters$variance$sigmasq[k]))
+    f_bc <- f_bc + bchronFit[[1]]$parameters$pro[k]*dnorm(1950-tau,bchronFit[[1]]$parameters$mean[k],sqrt(bchronFit[[1]]$parameters$variance$sigmasq[k]))
   }
 
-  return(list(tau_bc=tau_bc,f_bc=f_bc,bchronFit=bchronFit))
+  return(list(tau=tau,f_bc=f_bc,bchronFit=bchronFit))
 }
 
-simData <- readRDS('sim_inference.rds')
+# If necessary, do the BchronDensityFast_modified fits
+tau <- sim_anal[[1]]$tau
 
-tau_bc <- sim_inference[[1]]$sim_output$anal$tau
-bc100   <- do_BchronDensityFast_modified_fit(simData[[2]],tau_bc,2)
-bc1000  <- do_BchronDensityFast_modified_fit(simData[[3]],tau_bc,2)
-bc10000 <- do_BchronDensityFast_modified_fit(simData[[4]],tau_bc,2)
-
-# Add the BchronDensityFast_modified fits to sim_inference
-sim_inference[[1]]$tau_bc <- bc100$tau_bc
-sim_inference[[1]]$f_bc   <- bc100$f_bc
-sim_inference[[2]]$tau_bc <- bc1000$tau_bc
-sim_inference[[2]]$f_bc   <- bc1000$f_bc
-sim_inference[[3]]$tau_bc <- bc10000$tau_bc
-sim_inference[[3]]$f_bc   <- bc10000$f_bc
+sim_bc <- list()
+for(r in 1:length(Nvect)) {
+  N <- Nvect[r]
+  sim_bc_file <- paste0('sim_bc_',N,'.rds')
+  if(file.exists(sim_bc_file)) {
+    # Since the Bchron file exists, load it from file
+    sim_bc[[length(sim_bc) + 1]] <- readRDS(sim_bc_file)
+  } else {
+    # Since the Bchron file does not exist, do the fit and save it to file
+    sim_bc[[length(sim_bc) + 1]] <- do_BchronDensityFast_modified_fit(sim_data,Nvect[r],tau,2)
+    saveRDS(sim_bc[[length(sim_bc)]],sim_bc_file)
+  }
+}
 
 # Generate a 4 x 1 graph figure summarizing the simulation results
-pdf(here::here("Fig1_sim_inference.pdf"), width = 5, height = 2.5 * nplots)
+pdf("Fig2_sim_inference.pdf", width = 5, height = 2.5 * nplots)
 
 par(
   mfrow = c(nplots, 1),
@@ -274,11 +246,11 @@ par(
   # xpd = F
 )
 
-# (1) Calibration curve
+# (1) Add the calibration curve (first plot)
 par(mar = c(0, 4, 0, 0))
-bd_vis_calib_curve(min(sim_inference[[1]]$sim_output$anal$tau),
-  max(sim_inference[[1]]$sim_output$anal$tau),
-  sim_inference[[1]]$sim_output$prob$calibDf,
+bd_vis_calib_curve(min(tau),
+  max(tau),
+  sim_soln[[1]]$prob$calibDf,
   xlab = "",
   ylab = "Fraction Modern",
   xaxt = "n",
@@ -286,63 +258,70 @@ bd_vis_calib_curve(min(sim_inference[[1]]$sim_output$anal$tau),
 )
 box()
 
-# (2-nplots) Density plots
-sim_inference %>%
-  purrr::walk(function(x) {
-    par(mar = c(0, 4, 0, 0))
+# (2) Add the density plots (remaining plots)
 
-    bd_make_blank_density_plot(x$sim_output$anal,
-      ylim = c(0, 0.01),
-      xlab = "",
-      ylab = "Density",
-      xaxt = "n",
-      yaxt = "n"
-    )
+par(mar = c(0, 4, 0, 0))
+for(r in 1:length(Nvect)) {
+  # Make a blank plot
+  bd_make_blank_density_plot(sim_anal[[r]],
+    ylim = c(0, 0.01),
+    xlab = "",
+    ylab = "Density",
+    xaxt = "n",
+    yaxt = "n"
+  )
 
-    bd_add_shaded_quantiles(x$sim_output$anal,
-      col = "gray80"
-    )
+  # Add the shaded quantiles
+  bd_add_shaded_quantiles(sim_anal[[r]],
+    col = "gray80"
+  )
 
-    bd_plot_summed_density(x$sim_output$anal,
-      lwd = 2,
-      add = T,
-      col = "black"
-    )
+  # Add the summed probability density
+  bd_plot_summed_density(sim_anal[[r]],
+    lwd = 2,
+    add = T,
+    col = "black"
+  )
 
-    lines(x$tau_bc,x$f_bc,
-      lwd = 2,
-      col = "black",
-      lty=3
-    )
+  # Add the Bchron fit
+  lines(tau,sim_bc[[r]]$f_bc,
+    lwd = 2,
+    col = "black",
+    lty=3
+  )
 
-    bd_plot_50_percent_quantile(x$sim_output$anal,
-      lwd = 2,
-      add = T,
-      col = "red"
-    )
+  # Add solid 50% quantile
+  bd_plot_50_percent_quantile(sim_anal[[r]],
+    lwd = 2,
+    add = T,
+    col = "red"
+  )
 
-    bd_plot_known_sim_density(x$sim_output$anal,
-      lwd = 2,
-      add = T,
-      col = "blue"
-    )
+  # Plot the known, target distribution
+  bd_plot_known_sim_density(sim_anal[[r]],
+    lwd = 2,
+    add = T,
+    col = "blue"
+  )
 
-    text(
-      labels = paste0("n = ", x$n),
-      x = 600,
-      y = 0.009,
-      pos = 4,
-      cex = 2
-    )
+  # Add a label inicating the value of N for each subplot
+  text(
+    labels = paste0("N = ", Nvect[r]),
+    x = 600,
+    y = 0.009,
+    pos = 4,
+    cex = 2
+  )
+   
+  # Add y-axis tickmarks at four locations
+  axis(
+    side = 2,
+    at = c(0, 0.002, 0.004, 0.006, 0.008)
+  )
 
-    axis(
-      side = 2,
-      at = c(0, 0.002, 0.004, 0.006, 0.008)
-    )
+}
 
-    box()
-  })
-
+# Add an x-axis label to the bottom plot
 axis(side = 1)
 mtext("Calendar Date [AD]", side = 1, line = 2.5, cex = 0.75)
 

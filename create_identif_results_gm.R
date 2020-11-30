@@ -32,7 +32,7 @@ hp <-
     alpha_d = 1,
     # The gamma distribution shape parameter for sigma
     alpha_s = 10,
-    # The gamma distribution rate parameter for sigma, yielding a mode of 100
+    # The gamma distribution rate parameter for sigma, yielding a mode of 50 
     alpha_r = (10 - 1) / 50,
     # Minimum calendar date (years BC/AD)
     taumin = 600,
@@ -59,7 +59,7 @@ Fmat <- bd_calc_gauss_mix_pdf_mat(TH, tauVect)
 taumin <- hp$taumin
 taumax <- hp$taumax
 
-calibDf <- bd_load_calib_curve("intcal13")
+calibDf <- bd_load_calib_curve("intcal20")
 tau_curve <- 1950 - calibDf$yearBP
 phi_curve <- exp(-calibDf$uncalYearBP / 8033)
 
@@ -105,8 +105,8 @@ for (ii in 1:length(invSpanList)) {
   }
 }
 
-# Highlight regions 116 and 118 in all the graphs
-rect(invSpanList[[116]]$tau_right, max(Fmat) - .001, invSpanList[[118]]$tau_left, max(Fmat), border = NA, col = "indianred1")
+# Highlight regions 153 and 155 in all the graphs
+rect(invSpanList[[153]]$tau_right, max(Fmat) - .0004, invSpanList[[155]]$tau_left, max(Fmat), border = NA, col = "indianred1")
 
 for (s in 1:S) {
   ths <- TH[s, ]
@@ -137,8 +137,7 @@ for (ii in 1:length(invSpanList)) {
   }
 }
 
-
-rect(invSpanList[[116]]$phi_right, max(phiPdfMat) - 10, invSpanList[[118]]$phi_left, max(phiPdfMat), border = NA, col = "indianred1")
+rect(invSpanList[[153]]$phi_right, max(phiPdfMat) - 5, invSpanList[[155]]$phi_left, max(phiPdfMat), border = NA, col = "indianred1")
 
 for (s in 1:S) {
   lines(phiVect, phiPdfMat[s, ], col = col_vector[s], lwd = 4)
