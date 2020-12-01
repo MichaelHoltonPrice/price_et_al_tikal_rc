@@ -8,12 +8,12 @@ This repository contains the data and code for our paper:
 > Price, M.H., J.M. Capriles, J. Hoggarth, R.K. Bocinsky, C.E. Ebert, and J.H. Jones, (2020). *End-to-end Bayesian analysis for summarizing sets of radiocarbon dates*. In review.
 
 <!-- Our pre-print is online here: -->
-<!-- > Authors, (YYYY). _End-to-end Bayesian analysis for summarizing sets of radiocarbon dates_. Name of journal/book, Accessed 30 Nov 2020. Online at <https://doi.org/xxx/xxx> -->
+<!-- > Authors, (YYYY). _End-to-end Bayesian analysis for summarizing sets of radiocarbon dates_. Name of journal/book, Accessed 01 Dec 2020. Online at <https://doi.org/xxx/xxx> -->
 ### How to cite
 
 Please cite this compendium as:
 
-> Price, M.H., J.M. Capriles, J. Hoggarth, R.K. Bocinsky, C.E. Ebert, and J.H. Jones, (2020). *Compendium of R code and data for End-to-end Bayesian analysis for summarizing sets of radiocarbon dates*. Accessed 30 Nov 2020.
+> Price, M.H., J.M. Capriles, J. Hoggarth, R.K. Bocinsky, C.E. Ebert, and J.H. Jones, (2020). *Compendium of R code and data for End-to-end Bayesian analysis for summarizing sets of radiocarbon dates*. Accessed 01 Dec 2020.
 
 Getting the code and input data
 -------------------------------
@@ -136,10 +136,8 @@ This may take a day or more to finish. Once complete, the following new files ar
     -   Fig4\_tikal\_prev\_expert\_comparison.pdf
     -   Fig5\_maya\_histograms.pdf
     -   FigS3\_maya\_inference\_Kall.pdf
-    -   FigS4\_maya\_inference\_K2\_and\_K10\_with\_rc\_curve.pdf
-    -   supp\_count\_data.csv
 
-The first set of files provides the Mesorad data at various stages of processing. The second set of files (maya\_inference\_K) provides the inference results for Tikal/All sites with K=2 to 10 numbers of mixtures components. The third set of files is the figures and count data for the main manuscript and supplement.
+The first set of files provides the Mesorad data at various stages of processing. The second set of files (maya\_inference\_K) provides the inference results for Tikal/All sites with K=2 to 10 numbers of mixtures components. The third set of files is the figures the main manuscript and supplement.
 
 Identifiability results (supplement)
 ------------------------------------

@@ -147,10 +147,8 @@ This may take a day or more to finish. Once complete, the following new files ar
     + Fig4_tikal_prev_expert_comparison.pdf  
     + Fig5_maya_histograms.pdf  
     + FigS3_maya_inference_Kall.pdf  
-    + FigS4_maya_inference_K2_and_K10_with_rc_curve.pdf  
-    + supp_count_data.csv  
 
-The first set of files provides the Mesorad data at various stages of processing. The second set of files (maya_inference_K) provides the inference results for Tikal/All sites with K=2 to 10 numbers of mixtures components. The third set of files is the figures and count data for the main manuscript and supplement.
+The first set of files provides the Mesorad data at various stages of processing. The second set of files (maya_inference_K) provides the inference results for Tikal/All sites with K=2 to 10 numbers of mixtures components. The third set of files is the figures the main manuscript and supplement.
 
 ## Identifiability results (supplement)
 If necessary, set the R working directory to the directory with the files (e.g., using setwd). There are two scripts to run, one for the exponential example and one for the Gaussian mixture example. For the exponential example type:
