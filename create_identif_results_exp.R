@@ -16,7 +16,6 @@ invSpanList <- equifData$invSpanList
 
 taumin2 <- 970
 taumax2 <- 1035
-measError2 <- 0.00001
 ind2 <- (tau_curve >= taumin2) & (tau_curve <= taumax2)
 phiMin2 <- min(phi_curve[ind2])
 phiMax2 <- max(phi_curve[ind2])
