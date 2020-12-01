@@ -585,9 +585,9 @@ get_hist_breaks <- function(v_all,v_tik,dv) {
 # For Tikal, there is exactly one sample for which the peak calendar date is
 # ~AD 48 and for which there is a sharp, earlier peak and broader, later peak
 # with a slightly higher value of the density for the sharp, earlier peak. In
-# addition, there are three samples with peaks in the late AD 500s. To improve
+# addition, there are 46 samples with peaks as low as AD 408. To improve
 # interpretability of the histogram (by showing it on a smaller timespan) these
-# four samples are placed in a single bin between AD 595 and 600, and the fact
+# 46 samples are placed in a single bin between AD 595 and 600, and the fact
 # this is done is noted in the graph.
 
 # Create a modified vector with the samples below 600 set to 597.5
