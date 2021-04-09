@@ -81,6 +81,40 @@ calcPerturbMatExp <- function(tau, phiVect, r, taumin, taumax) {
   return(S)
 }
 
+calc_h <- function(th_reduced,M,tau,sig_min=0) {
+  # If the parameter vector is invalid, return infinity
+  if (!is_th_reduced_valid(th_reduced,sig_min)) {
+    stop("th_reduced is invalid")
+  }
+
+  tau_min <- min(tau)
+  tau_max <- max(tau)
+
+  # Add an undersore to pi, the mixture proportions, since pi is 3.14... in R
+  K <- (length(th_reduced) + 1)/3
+  pi_ <- th_reduced[1:(K-1)]
+
+  th <- c(1-sum(pi_),th_reduced)
+  # Calculate v, the vector of densities
+  v <- bd_calc_gauss_mix_pdf(th,tau,tau_min,tau_max)
+  h <- M %*% v
+  return(h)
+}
+
+calc_gradient <- function(th_reduced,M,tau,sig_min=0) {
+  tau_min <- min(tau)
+  tau_max <- max(tau)
+  K <- (length(th_reduced) + 1)/3
+  th <- c(1-sum(th_reduced[1:(K-1)]),th_reduced)
+  P <- calcPerturbMatGaussMix(tau,th,tau_min,tau_max)
+
+  h <- as.vector(calc_h(th_reduced,M,tau,sig_min))
+  X1 <- M %*% P
+  X2 <- replicate(ncol(P),1/h)
+  X <- X1 * X2
+  return(-as.vector(colSums(X)))
+}
+
 # Calculate the perturbation matrix for the (possibly) truncated Gaussian
 # mixture distribution
 calcPerturbMatGaussMix <- function(tau, th, taumin = NA, taumax = NA) {
@@ -204,4 +238,3 @@ calc_meas_matrix2 <- function(tau, phi_m, sig_m, calibDf, addCalibUnc = T) {
   M <- M * dtau
   return(M)
 }
-
