@@ -1,218 +1,56 @@
 library(baydem)
 library(magrittr)
 library(Bchron)
+library(testthat)
 
-## Generate simulated data.
-# Sample sizes of the simulations
-sim_samp <- c(10, 100, 1000, 10000)
-
-# The simulation distribution: a Gaussian mixture with ordering pi1, pi2, mu1,
-# mu2, sig1, sig2
-th_sim <-
-  c(
-    pi1 = 0.2,
-    pi2 = 0.8,
-    mu1 = 775,
-    mu2 = 1000,
-    sig1 = 35,
-    sig2 = 45
-  )
-
-# Set the hyperparameters
-hp <-
-  list(
-    # Class of fit (Gaussian mixture)
-    fitType = "gaussmix",
-    # Parameter for the dirichlet draw of the mixture probabilities
-    alpha_d = 1,
-    # The gamma distribution shape parameter for sigma
-    alpha_s = 3,
-    # The gamma distribution rate parameter for sigma, yielding a mode of 100 or 300, respectively
-    alpha_r = list(
-      (3 - 1) / 100,
-      (3 - 1) / 300
-    ),
-    # Minimum calendar date (years BC/AD)
-    taumin = 600,
-    # Maximum calendar date (years BC/AD)
-    taumax = 1300,
-    # Spacing for the measurement matrix (years)
-    dtau = 1,
-    # Number of mixtures
-    K = 2
-  ) %>%
-  purrr::cross()
-
-# Generate the largest sample;
-# We'll subset this in the function below, simulating
-# the process of retrieving more radiocarbon dates
-# Set the random number seed (seed from random.org)
-set.seed(806372)
-sim_dates <-
-  tibble::tibble(
-    date_AD = baydem::bd_sample_gauss_mix(
-      # A really large number of samples from which to draw the
-      # test datasets, in case someone wants to run more than 10,000
-      N = 100000,
-      th = th_sim,
-      taumin = hp[[1]]$taumin,
-      taumax = hp[[1]]$taumax
-    )
-  ) %>%
-  dplyr::bind_cols(
-    .,
-    baydem::bd_draw_rc_meas_using_date(
-      t_e = .$date_AD,
-
-      # Load the calibration data frame by calling bd_load_calib_curve
-      calibDf = bd_load_calib_curve("intcal13"),
-
-      # For simulating radiocarbon measurements, a draw is made for the standard
-      # deviation of the fraction modern from a uniform density on the interval 0.0021
-      # to 0.0028. This is specified via the list errorSpec
-      errorSpec = list(
-        min = .0021,
-        max = .0028
-      ),
-      isAD = T
-    ) %>%
-      tibble::as_tibble()
-  )
-
-sim_inference <-
-  sim_samp %>%
-  magrittr::set_names(., .) %>%
-  as.list() %>%
-  purrr::cross2(hp) %>%
-  purrr::map(function(x) {
-    x %<>%
-      magrittr::set_names(c("n", "hp"))
-
-    x$sim_dates <- sim_dates[1:x$n, ]
-
-    x
-  })
-
-# If simulated data exists for runs, load it. If are missing for any run, generate
-# new data for all runs.
-# Doing inference involves three steps:
-#
-# (1) Generate the problem
-# (2) Do the Bayesian sampling
-# (3) Run some standard analyses
-out_file <- here::here("sim_inference.rds")
-
-if (
-  !file.exists(out_file) ||
-    !identical(
-      out_file %>%
-        readr::read_rds() %>%
-        purrr::map(magrittr::extract, c("n", "hp", "sim_dates")),
-      sim_inference
-    )
-) {
-  if (file.exists(out_file)) {
-    saved_results <-
-      out_file %>%
-      readr::read_rds() %>%
-      purrr::map(magrittr::extract, c("n", "hp", "sim_dates"))
-
-    sim_inference %<>%
-      setdiff(saved_results)
+# ------------------------------------------------------------------------------
+# (0) Define functions used below
+# ------------------------------------------------------------------------------
+# Write files for doing KDE Plot fits with OxCal in the format expected by OxCal
+write_KDE_Plot_model <- function(trc_m,sig_trc_m,file_name) {
+  sink(file_name)
+  cat('KDE_Plot()\n')
+  cat('{\n')
+  for(n in 1:length(trc_m)) {
+    cat(paste0('R_Date(\"obs',
+               as.character(n),
+               '\",',
+               as.character(trc_m[n]),
+               ',',
+               as.character(sig_trc_m[n]),');'))
+    cat('\n')
   }
-
-  sim_inference %<>%
-    purrr::map(
-      function(x) {
-        prob <-
-          list(
-            phi_m = x$sim_dates$phi_m,
-            sig_m = x$sim_dates$sig_m,
-            hp = x$hp,
-            calibDf = bd_load_calib_curve("intcal13"),
-            # Define the control parameters for the call to Stan. Use 4500 total MCMC
-            # samples, of which 2000 are warmup samples. Since four chains are used, this
-            # yields 4*(4500-2000) = 10,000 total samples.
-            control = list(
-              sampsPerChain = 4500,
-              warmup = 2000
-            )
-          )
-
-        soln <-
-          baydem::bd_do_inference(prob)
-
-        anal <-
-          baydem::bd_analyze_soln(
-            soln = soln,
-            th_sim = th_sim
-          )
-
-        x$sim_output <-
-          tibble::lst(
-            prob,
-            soln,
-            anal
-          )
-
-        return(x)
-      }
-    )
-
-  if (file.exists(out_file)) {
-    saved_results <-
-      out_file %>%
-      readr::read_rds()
-
-    # Discard whatever results were just calculated
-    saved_results %<>%
-      purrr::discard(saved_results %>%
-        purrr::map(magrittr::extract, c("n", "hp", "sim_dates")) %>%
-        magrittr::is_in(sim_inference %>%
-          purrr::map(magrittr::extract, c("n", "hp", "sim_dates"))))
-
-    sim_inference <- base::union(
-      saved_results,
-      sim_inference
-    )
-  }
-
-  # Save the full result set
-  sim_inference %>%
-    readr::write_rds(out_file,
-      compress = "gz"
-    )
+  cat('};\n')
+  sink()
 }
 
-# Load the data.
-sim_inference <-
-  "sim_inference.rds" %>%
-  here::here() %>%
-  readr::read_rds()
+# Load the result of a KDE fit done externally using the KDE web inteface.
+load_KDE_Plot_fit <- function(file_name) {
+  data_frame <- read.table(file_name,sep="\t")
+  tau <- as.vector(data_frame[,1])
+  f   <- as.vector(data_frame[,2])
+  dtau <- unique(diff(tau))
+  if (length(dtau) != 1) {
+    stop("Spacing of tau is not even")
+  }
+  f <- f/sum(f)/dtau
+  return(list(tau=tau,f=f))
+}
 
-#### Make Simulated Plots ####
-sim_inference %<>%
-  purrr::keep(function(x) x$hp$alpha_r == ((3 - 1) / 300)) %>%
-  purrr::keep(function(x) x$n != 10)
-
-set.seed(416755)
-
-nplots <- length(sim_inference) + 1
-
-
-# The following function is based on:
+# Do a Gaussian mixture fit to samples drawn from the posterior densities of
+# individually calibrated samples. The following function is based on:
 # https://github.com/andrewcparnell/Bchron/blob/master/R/BchronDensityFast.R
 #
 # The only difference is that in the call to mclust::densityMclust a one
 # dimensional variable/unequal variance model is used rather than letting the
-# model be chosen via the BIC. This ensures that this calculation most closely
-# mirrors the inference done with baydem.
+# model be chosen via the BIC. This ensures that the calculation mirrors the
+# maximum likelihood fitting and Bayesian inference done by baydem.
 BchronDensityFast_modified <-
 function(ages,ageSds,calCurves,pathToCalCurves=system.file('data',package='Bchron'),dfs=rep(100,length(ages)),samples=2000,G=30) {
 
 if(length(ages)!=length(ageSds)) stop("ages and 1-sigma errors must be same length")
 if(length(ages)!=length(calCurves)) stop("ages and Calibration curves must be same length")
-  
+
 # Calibrate ages
 x = BchronCalibrate(ages=ages,ageSds=ageSds,calCurves=calCurves,pathToCalCurves=pathToCalCurves,dfs=rep(100,length(ages)))
 
@@ -233,117 +71,307 @@ class(output) = 'BchronDensityRunFast'
 return(output)
 }
 
-do_BchronDensityFast_modified_fit <- function(sim,tau_bc,K) {
-  N <- nrow(sim$sim_dates)
-  bchronFit <- BchronDensityFast_modified(ages=round(sim$sim_dates$trc_m),ageSds=round(sim$sim_dates$sig_trc_m),calCurves=rep('intcal13',N),G=K)
-  f_bc <- rep(0,length(tau_bc))
+# A wrapper function to do the mixture fit with BchronDensityFast_modified
+do_BchronDensityFast_modified_fit <- function(trc_m,sig_trc_m,tau,K) {
+  N <- length(trc_m)
+  bchronFit <- BchronDensityFast_modified(ages=round(trc_m),
+                                          ageSds=round(sig_trc_m),
+                                          calCurves=rep('intcal20',N),G=K)
+  f <- rep(0,length(tau))
   for(k in 1:K) {
-    f_bc <- f_bc + bchronFit[[1]]$parameters$pro[k]*dnorm(1950-tau_bc,bchronFit[[1]]$parameters$mean[k],sqrt(bchronFit[[1]]$parameters$variance$sigmasq[k]))
+    f <- f + bchronFit[[1]]$parameters$pro[k]*
+      dnorm(1950-tau,
+            bchronFit[[1]]$parameters$mean[k],
+            sqrt(bchronFit[[1]]$parameters$variance$sigmasq[k]))
   }
 
-  return(list(tau_bc=tau_bc,f_bc=f_bc,bchronFit=bchronFit))
+  return(list(tau=tau,f=f,bchronFit=bchronFit))
 }
 
-simData <- readRDS('sim_inference.rds')
+# ------------------------------------------------------------------------------
+# (1) Generate simulated data for N=10000 observations using the function
+# baydem::simulate_rc_data, then subset the simulation to create simulations
+# with N=100 and 1000 observations.
+# ------------------------------------------------------------------------------
 
-tau_bc <- sim_inference[[1]]$sim_output$anal$tau
-bc100   <- do_BchronDensityFast_modified_fit(simData[[2]],tau_bc,2)
-bc1000  <- do_BchronDensityFast_modified_fit(simData[[3]],tau_bc,2)
-bc10000 <- do_BchronDensityFast_modified_fit(simData[[4]],tau_bc,2)
+# Create the "target", simulation parameter vector, th_sim. The simulation
+# distribution is a truncated Gaussian mixture with ordering pi1, pi2, mu1,
+# mu2, sig1, sig2, and for which the truncation limits are tau_min = AD 600 and
+# tau_max = AD 1300. The truncation has negligible effect since the probability
+# density is exceedingly small at the truncation boundaries.
 
-# Add the BchronDensityFast_modified fits to sim_inference
-sim_inference[[1]]$tau_bc <- bc100$tau_bc
-sim_inference[[1]]$f_bc   <- bc100$f_bc
-sim_inference[[2]]$tau_bc <- bc1000$tau_bc
-sim_inference[[2]]$f_bc   <- bc1000$f_bc
-sim_inference[[3]]$tau_bc <- bc10000$tau_bc
-sim_inference[[3]]$f_bc   <- bc10000$f_bc
+th_sim <-
+  c(
+    pi1 = 0.2,
+    pi2 = 0.8,
+    mu1 = 775,
+    mu2 = 1000,
+    sig1 = 35,
+    sig2 = 45
+  )
 
-# Generate a 4 x 1 graph figure summarizing the simulation results
-pdf(here::here("Fig1_sim_inference.pdf"), width = 5, height = 2.5 * nplots)
+# Minimum calendar date (years AD)
+tau_min <- 600
+# Maximum calendar date (years AD)
+tau_max <- 1300
+# Spacing of calendar dates for the sampling grid
+dtau <- 1
 
-par(
-  mfrow = c(nplots, 1),
-  xaxs = "i", # No padding for x-axis
-  yaxs = "i", # No padding for y-axis
-  # outer margins with ordering bottom, left, top, right:
-  oma = c(4, 2, 2, 2),
-  # plot margins with ordering bottom, left, top, right:
-  mar = c(2, 4, 0, 0)
-  # Don't add data if it falls outside plot window
-  # xpd = F
-)
+# Use the intcal20 calibration curve
+calib_curve <- "intcal20"
+calib_df <- load_calib_curve(calib_curve)
 
-# (1) Calibration curve
-par(mar = c(0, 4, 0, 0))
-bd_vis_calib_curve(min(sim_inference[[1]]$sim_output$anal$tau),
-  max(sim_inference[[1]]$sim_output$anal$tau),
-  sim_inference[[1]]$sim_output$prob$calibDf,
-  xlab = "",
-  ylab = "Fraction Modern",
-  xaxt = "n",
-  invertCol = "gray80"
-)
-box()
+# Create the simulation specification. The error speficiation is that the error
+# for the fraction modern value of each sample is uniformily drawn from the
+# interval 0.0021 to 0.0028. Use a random number seed for reproducibility.
+sim_spec <- list(model_spec=
+                   list(density_type = "trunc_gauss_mix",
+                        th=c(th_sim,tau_min,tau_max),
+                        error_spec=list(type="unif_fm",min=.0021,max=.0028),
+                        is_AD=T),
+                 N=10000,
+                 calib_curve=calib_curve,
+                 seed=93004)
 
-# (2-nplots) Density plots
-sim_inference %>%
-  purrr::walk(function(x) {
-    par(mar = c(0, 4, 0, 0))
+sim10000 <- simulate_rc_data(sim_spec)
 
-    bd_make_blank_density_plot(x$sim_output$anal,
-      ylim = c(0, 0.01),
-      xlab = "",
-      ylab = "Density",
-      xaxt = "n",
-      yaxt = "n"
+# ------------------------------------------------------------------------------
+# (2) For each of N=100, N=1000, and N=10000, do a maximum likelihood fit to
+# data (checking first whether a save file already exists for each maximum
+# likelihood fit). Use random number seeds for reproducibility. If necessary
+# (because fewer cores are available or memory is limited), the number of cores
+# used for parallel computation can be reduced from 10.
+# ------------------------------------------------------------------------------
+max_lik_fit_seeds <- c(739037,217298,971210)
+num_cores <- 10
+
+Nvect <- c(100,1000,10000)
+max_lik_fit_list <- list()
+for(m_N in 1:length(Nvect)) {
+  N <- Nvect[m_N]
+  save_file <- paste0("max_lik_fit",N,".rds")
+  seed <- max_lik_fit_seeds[m_N]
+  if (!file.exists(save_file)) {
+    phi_m <- sim10000$data$rc_meas$phi_m[1:N]
+    sig_m <- sim10000$data$rc_meas$sig_m[1:N]
+    max_lik_fit_list[[m_N]] <- fit_trunc_gauss_mix(2,
+                                                   phi_m,
+                                                   sig_m,
+                                                   tau_min,
+                                                   tau_max,
+                                                   dtau,
+                                                   calib_df,
+                                                   num_restarts=100,
+                                                   maxfeval=40000,
+                                                   num_cores=num_cores,
+                                                   input_seed=seed)
+    saveRDS(max_lik_fit_list[[m_N]],save_file)
+  } else {
+    max_lik_fit_list[[m_N]] <- readRDS(save_file)
+    expect_equal(
+      max_lik_fit_list[[m_N]]$base_seed,
+      seed
     )
+  }
+}
 
-    bd_add_shaded_quantiles(x$sim_output$anal,
-      col = "gray80"
-    )
+# ------------------------------------------------------------------------------
+# (3) Create plots for non-Bayesian "fits" for each N. Curves included are:
+#
+# (a) The target density
+# (b) The maximum likelihood fit
+# (c) The summed density
+# (d) A Bchron mixture fit
+# (e) An OxCal KDE (for N=100 and N=1000)
+#
+# This yields the following publication result(s):
+# Fig1_non_bayesian_fits.pdf
+# ------------------------------------------------------------------------------
 
-    bd_plot_summed_density(x$sim_output$anal,
-      lwd = 2,
-      add = T,
-      col = "black"
-    )
+# Write the KDE plots
+for(m_N in 1:length(Nvect)) {
+  N <- Nvect[m_N]
+  save_file <- paste0("KDE_input_",N,".txt")
+  trc_m <- sim10000$data$rc_meas$trc_m[1:N]
+  sig_trc_m <- sim10000$data$rc_meas$sig_trc_m[1:N]
+  write_KDE_Plot_model(trc_m,sig_trc_m,save_file)
+}
 
-    lines(x$tau_bc,x$f_bc,
-      lwd = 2,
-      col = "black",
-      lty=3
-    )
+# Show non-Bayesian fits
+num_plots <- 3
+tau_plot <- seq(tau_min,tau_max,by=dtau)
+f_sim <- calc_gauss_mix_pdf(th_sim,tau_plot,tau_min=tau_min,tau_max=tau_max)
 
-    bd_plot_50_percent_quantile(x$sim_output$anal,
-      lwd = 2,
-      add = T,
-      col = "red"
-    )
+M100 <- calc_meas_matrix(tau_plot,
+                         sim10000$data$rc_meas$phi_m[1:100],
+                         sim10000$data$rc_meas$sig_m[1:100],
+                         calib_df
+                         )
+M100 <- M100 / replicate(length(tau_plot),rowSums(M100)*dtau)
+f_spdf100 <- colMeans(M100)
+f_ml100 <- calc_gauss_mix_pdf(max_lik_fit_list[[1]]$th,
+                              tau_plot,
+                              tau_min=tau_min,
+                              tau_max=tau_max)
+kde100 <- load_KDE_Plot_fit("posterior_from_oxcal_100.txt")
+bchron100 <-
+  do_BchronDensityFast_modified_fit(sim10000$data$rc_meas$trc_m[1:100],
+                                    sim10000$data$rc_meas$sig_trc_m[1:100],
+                                    tau_plot,
+                                    2)
+M1000 <- calc_meas_matrix(tau_plot,
+                          sim10000$data$rc_meas$phi_m[1:1000],
+                          sim10000$data$rc_meas$sig_m[1:1000],
+                          calib_df
+                          )
+M1000 <- M1000 / replicate(length(tau_plot),rowSums(M1000)*dtau)
+f_spdf1000 <- colMeans(M1000)
+f_ml1000 <- calc_gauss_mix_pdf(max_lik_fit_list[[2]]$th,
+                               tau_plot,
+                               tau_min=tau_min,
+                               tau_max=tau_max)
+kde1000 <- load_KDE_Plot_fit("posterior_from_oxcal_1000.txt")
+bchron1000 <-
+  do_BchronDensityFast_modified_fit(sim10000$data$rc_meas$trc_m[1:1000],
+                                    sim10000$data$rc_meas$sig_trc_m[1:1000],
+                                    tau_plot,
+                                    2)
+M10000 <- calc_meas_matrix(tau_plot,
+                           sim10000$data$rc_meas$phi_m,
+                           sim10000$data$rc_meas$sig_m,
+                           calib_df
+                           )
+M10000 <- M10000 / replicate(length(tau_plot),rowSums(M10000)*dtau)
+f_spdf10000 <- colMeans(M10000)
+f_ml10000 <- calc_gauss_mix_pdf(max_lik_fit_list[[3]]$th,
+                                tau_plot,
+                                tau_min=tau_min,
+                                tau_max=tau_max)
+bchron10000 <-
+  do_BchronDensityFast_modified_fit(sim10000$data$rc_meas$trc_m,
+                                    sim10000$data$rc_meas$sig_trc_m,
+                                    tau_plot,
+                                    2)
 
-    bd_plot_known_sim_density(x$sim_output$anal,
-      lwd = 2,
-      add = T,
-      col = "blue"
-    )
+pdf("Fig1_non_bayesian_fits.pdf",width=5,height=2.5*num_plots)
 
-    text(
-      labels = paste0("n = ", x$n),
-      x = 600,
-      y = 0.009,
-      pos = 4,
-      cex = 2
-    )
+  par(
+    mfrow = c(num_plots, 1),
+    xaxs = "i", # No padding for x-axis
+    yaxs = "i", # No padding for y-axis
+    # outer margins with ordering bottom, left, top, right:
+    oma = c(4, 2, 2, 2),
+    # plot margins with ordering bottom, left, top, right:
+    mar = c(2, 4, 0, 0)
+  )
 
-    axis(
-      side = 2,
-      at = c(0, 0.002, 0.004, 0.006, 0.008)
-    )
+  # N=100
+  plot(tau_plot,
+       f_sim,
+       xlim=c(tau_min,tau_max),
+       ylim=c(0,0.01),
+       xlab = "",
+       ylab = "Density",
+       xaxt = "n",
+       yaxt = "n",
+       col="blue",
+       type="l",
+       lwd=2
+      )
+  lines(tau_plot,f_spdf100,col="black",lwd=2)
+  lines(tau_plot,f_ml100,col="red",lwd=2)
+  lines(kde100$tau,kde100$f,col="grey",lwd=2)
+  lines(bchron100$tau,bchron100$f,col="grey",lwd=2,lty=3)
+  #lines(kde100$tau,kde100$f,col="black",lwd=2,lty=3)
 
-    box()
-  })
+  # N=1000
+  plot(tau_plot,
+       f_sim,
+       xlim=c(tau_min,tau_max),
+       ylim=c(0,0.01),
+       xlab = "",
+       ylab = "Density",
+       xaxt = "n",
+       yaxt = "n",
+       col="blue",
+       type="l",
+       lwd=2
+      )
+  lines(tau_plot,f_spdf1000,col="black",lwd=2)
+  lines(tau_plot,f_ml1000,col="red",lwd=2)
+  lines(kde1000$tau,kde1000$f,col="grey",lwd=2)
+  lines(bchron1000$tau,bchron1000$f,col="grey",lwd=2,lty=3)
 
-axis(side = 1)
-mtext("Calendar Date [AD]", side = 1, line = 2.5, cex = 0.75)
+  # N=10000
+  plot(tau_plot,
+       f_sim,
+       xlim=c(tau_min,tau_max),
+       ylim=c(0,0.01),
+       xlab = "",
+       ylab = "Density",
+       xaxt = "n",
+       yaxt = "n",
+       col="blue",
+       type="l",
+       lwd=2
+      )
+  lines(tau_plot,f_spdf10000,col="black",lwd=2)
+  lines(tau_plot,f_ml10000,col="red",lwd=2)
+  lines(bchron10000$tau,bchron10000$f,col="grey",lwd=2,lty=3)
+
+  axis(side = 1)
+  mtext("Calendar Date [AD]", side = 1, line = 2.5, cex = 0.75)
 
 dev.off()
+
+# ------------------------------------------------------------------------------
+# (4) Do Bayesian sampling for each N
+# ------------------------------------------------------------------------------
+# Set the hyperparameters
+hp <- list(
+    # Parameter for the dirichlet draw of the mixture probabilities
+    alpha_d = 1,
+    # The gamma distribution shape parameter for sigma
+    alpha_s = 3,
+    # The gamma distribution rate parameter for sigma, yielding a mode of 100
+    alpha_r = (3 - 1) / 100,
+    # The spacing for the Riemann sum (i.e., for the measurement matrix)
+    dtau = 1
+)
+
+# Define the density model
+density_model <- list(type="trunc_gauss_mix",
+                      tau_min=tau_min,
+                      tau_max=tau_max,
+                      K=2)
+
+bayesian_soln_list <- list()
+stan_seeds <- c(433582,774538,979639)
+control <- list(samps_per_chain=4500,
+                warmup = 2000)
+for(m_N in 1:length(Nvect)) {
+  N <- Nvect[m_N]
+  save_file <- paste0("bayesian_soln",N,".rds")
+  seed <- stan_seeds[m_N]
+  if (!file.exists(save_file)) {
+    phi_m <- sim10000$data$rc_meas$phi_m[1:N]
+    sig_m <- sim10000$data$rc_meas$sig_m[1:N]
+    rc_meas <- list(phi_m=phi_m,sig_m=sig_m)
+    bayesian_soln <- sample_theta(rc_meas,
+                         density_model,
+                         hp,
+                         calib_df,
+                         th0=max_lik_fit_list[[m_N]]$th,
+                         stan_seed=stan_seeds[m_N],
+                         control=control)
+
+    bayesian_soln_list[[m_N]] <- bayesian_soln
+    saveRDS(bayesian_soln_list[[m_N]],save_file)
+  } else {
+    bayesian_soln_list[[m_N]] <- readRDS(save_file)
+    expect_equal(
+      bayesian_soln_list[[m_N]]$final_stan_seed,
+      seed
+    )
+  }
+}
