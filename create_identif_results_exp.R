@@ -5,7 +5,7 @@ source(here::here("bayesian_radiocarbon_functions.R"))
 set.seed(183450) # from random.org between 1 and 1,000,000
 
 # Load the calibration curve and call the code to assess equifinality
-calibDf <- bd_load_calib_curve("intcal13")
+calibDf <- bd_load_calib_curve("intcal20")
 tau_curve <- 1950 - calibDf$yearBP # AD
 equiList <- bd_calc_calib_curve_equif_dates(calibDf)
 phi_curve <- bd_calc_calib_curve_frac_modern(calibDf)
@@ -16,7 +16,6 @@ invSpanList <- equifData$invSpanList
 
 taumin2 <- 970
 taumax2 <- 1035
-measError2 <- 0.00001
 ind2 <- (tau_curve >= taumin2) & (tau_curve <= taumax2)
 phiMin2 <- min(phi_curve[ind2])
 phiMax2 <- max(phi_curve[ind2])
@@ -39,8 +38,8 @@ pdf(here::here("FigS1_exp_example.pdf"), width = 20, height = 18)
 layout(matrix(c(1, 1, 1, 2, 3, 4, 5, 6, 7), 3, 3, byrow = TRUE))
 taumina <- 700
 taumaxa <- 950
-tauminb <- 800
-taumaxb <- 850
+tauminb <- 825
+taumaxb <- 875
 tauminc <- 900
 taumaxc <- 950
 col0 <- "indianred1"

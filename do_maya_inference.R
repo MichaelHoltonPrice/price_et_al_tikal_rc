@@ -6,28 +6,7 @@ library(rstan)
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
 
-# # Here, we load the MesoRAD version 1.1 data, archived on
-# # tDAR at DOI https://doi.org/10.6067/XCV8455306.
-# # These data are protected due to site locations,
-# # and thus are not available publicly. Therefor, we
-# # strip the locational data for the research compendium.
-# # This also drops the environmental data.
-# here::here("data-raw/MesoRAD-v.1.1_FINAL.xlsx") %>%
-#   readxl::read_excel(sheet = "MesoRAD v 1.1. Dates") %>%
-#   dplyr::select(
-#     -Latitude,
-#     -Longitude
-#   ) %>%
-#   list(
-#     `MesoRAD v 1.1. Dates` = .,
-#     `Citations` = here::here("data-raw/MesoRAD-v.1.1_FINAL.xlsx") %>%
-#       readxl::read_excel(
-#         sheet = "Citations",
-#         col_names = FALSE
-#       )
-#   ) %>%
-#   writexl::write_xlsx(here::here("data-raw/MesoRAD-v.1.1_FINAL_no_locations.xlsx"))
-
+# We use locationless MesoRAD data, version 1.2
 # Set a random number seed to make the Mesorad data generation reproducible
 set.seed(276368)
 
@@ -37,8 +16,8 @@ if (!file.exists(here::here("mesorad_combined.csv"))) {
 
   # Read the location-less data
   mesorad <-
-    here::here("MesoRAD-v.1.1_FINAL_no_locations.xlsx") %>%
-    readxl::read_excel(sheet = "MesoRAD v 1.1. Dates")
+    here::here("MesoRAD-v.1.2_no_locations.xlsx") %>%
+    readxl::read_excel(sheet = "MesoRAD v 1.2 Dates")
 
   hygKeep <- c(
     NA,
@@ -54,7 +33,10 @@ if (!file.exists(here::here("mesorad_combined.csv"))) {
   )
 
   hygRej <- c(
+    "Acid treatment only, anomalous date",
+    "Anomalous date",
     "Conventional 14C yr not reported",
+    "Date to early for context",
     "Date too early for context",
     "Date too early for context, reused beam",
     "Date too early for context, experimental dating technique",
@@ -70,6 +52,7 @@ if (!file.exists(here::here("mesorad_combined.csv"))) {
     "Large measurement errorr, date too early for context",
     "Large measurement error, date too late for context (modern)",
     "Large measurement error; date too late for context (modern)",
+    "Old wood",
     "Outlier ignored by author",
     "outlier ignored by author",
     "Post-bomb (F14C > 1.0)",
@@ -83,8 +66,8 @@ if (!file.exists(here::here("mesorad_combined.csv"))) {
   # Test to make sure all hygiene categories are considered
   unrecognized <-
     mesorad %>%
-    dplyr::filter(!(`Chronometric Hygiene/ Issues with Dates` %in% c(hygKeep, hygRej))) %$%
-    `Chronometric Hygiene/ Issues with Dates` %>%
+    dplyr::filter(!(`Chronometric Hygiene/Issues with Dates` %in% c(hygKeep, hygRej))) %$%
+    `Chronometric Hygiene/Issues with Dates` %>%
     unique() %>%
     sort()
 
@@ -94,23 +77,23 @@ if (!file.exists(here::here("mesorad_combined.csv"))) {
 
   # Write table of hygiene data
   mesorad %>%
-    dplyr::group_by(`Chronometric Hygiene/ Issues with Dates`) %>%
+    dplyr::group_by(`Chronometric Hygiene/Issues with Dates`) %>%
     dplyr::count() %>%
     dplyr::arrange(-n) %>%
     readr::write_csv(here::here("log_mesorad_hygiene_counts.csv"))
 
   mesorad %<>%
-    dplyr::filter(`Chronometric Hygiene/ Issues with Dates` %in% hygKeep) %>%
+    dplyr::filter(`Chronometric Hygiene/Issues with Dates` %in% hygKeep) %>%
     dplyr::mutate_at(
       .vars = dplyr::vars(
         `Conventional 14C age (BP)`,
-        `Error (±)`
+        `Error`
       ),
       as.integer
     ) %>%
     dplyr::filter(
       !is.na(`Conventional 14C age (BP)`),
-      !is.na(`Error (±)`)
+      !is.na(`Error`)
     ) %>%
     dplyr::arrange(Site, `Conventional 14C age (BP)`) %>%
     dplyr::mutate(
@@ -126,7 +109,7 @@ if (!file.exists(here::here("mesorad_combined.csv"))) {
     dplyr::select(
       Site,
       `Age BP` = `Conventional 14C age (BP)`,
-      `Error` = `Error (±)`,
+      `Error` = `Error`,
       `Duplicate/Replicate`
     ) %>%
     dplyr::arrange(Site, `Age BP`)
@@ -148,12 +131,10 @@ if (!file.exists(here::here("mesorad_combined.csv"))) {
     dplyr::summarise_all(sum)
 
   # Combine all duplicate dates
-  cluster <- multidplyr::new_cluster(6)
   combined_mesorad <-
     mesorad %>%
     dplyr::filter(!is.na(`Duplicate/Replicate`)) %>%
     dplyr::group_by(Site, `Duplicate/Replicate`) %>%
-    multidplyr::partition(cluster) %>%
     dplyr::summarise(Combined = list(
       (function(age_bp, error) {
         samples <-
@@ -256,7 +237,7 @@ hp0 <-
   )
 
 # The calibration dataframe
-calibDf = baydem::bd_load_calib_curve("intcal13")
+calibDf = baydem::bd_load_calib_curve("intcal20")
 
 # Define the control parameters for the call to Stan. Use 4500 total MCMC
 # samples, of which 2000 are warmup samples. Since four chains are used, this
@@ -347,7 +328,7 @@ out_all_K10 <- results[[which(unlist(lapply(results,function(x){x$prob$hp$K==10 
 
 ### FIGURE 2: Maya/Tikal densities
 # Plot the All and Tikal reconstructions together using the K=10 results
-fileName <- here::here("Fig2_maya_inference_K10.pdf")
+fileName <- here::here("Fig3_maya_inference_K10.pdf")
 
 pdf(fileName, width = 10, height = 10)
 xat <- seq(-1000, 1800, 200)
@@ -518,7 +499,7 @@ expert_recons[c(
 
 # Now that preliminaries are out of the way, make the actual plot comparing our
 # reconstruction to previous expert reconstructions
-fileName <- here::here("Fig3_tikal_prev_expert_comparison.pdf")
+fileName <- here::here("Fig4_tikal_prev_expert_comparison.pdf")
 pdf(fileName, width = 6, height = 12)
 par(
   mfrow = c(5, 1),
@@ -580,7 +561,7 @@ dev.off()
 # histograms comes from each Bayesian sample.
 #
 
-fileName <- here::here("Fig4_maya_histograms.pdf")
+fileName <- here::here("Fig5_maya_histograms.pdf")
 
 pdf(fileName, width = 10, height = 6)
 
@@ -604,9 +585,9 @@ get_hist_breaks <- function(v_all,v_tik,dv) {
 # For Tikal, there is exactly one sample for which the peak calendar date is
 # ~AD 48 and for which there is a sharp, earlier peak and broader, later peak
 # with a slightly higher value of the density for the sharp, earlier peak. In
-# addition, there are three samples with peaks in the late AD 500s. To improve
+# addition, there are 46 samples with peaks as low as AD 408. To improve
 # interpretability of the histogram (by showing it on a smaller timespan) these
-# four samples are placed in a single bin between AD 595 and 600, and the fact
+# 46 samples are placed in a single bin between AD 595 and 600, and the fact
 # this is done is noted in the graph.
 
 # Create a modified vector with the samples below 600 set to 597.5
@@ -661,89 +642,3 @@ for (kk in 1:length(Kvect)) {
   }
 }
 dev.off()
-
-### FIGURE S4: A detailed assessment for All sites
-calc_quantile_dates <- function(M, tau, qlev = .5) {
-  # This assumes tau is spaced at one year intervals
-  dtau <- unique(diff(tau))
-  if (length(dtau) > 1) {
-    stop("dtau should be unique")
-  }
-
-  if (dtau != 1) {
-    stop("dtau should be 1")
-  }
-
-  tau1 <- rep(NA, nrow(M))
-  for (n in 1:nrow(M)) {
-    fv <- M[n, ] / sum(M[n, ])
-    Fv <- cumsum(fv)
-    m <- which(Fv >= qlev)[1] # First over qlev
-    tau1[n] <- tau[m - 1] + (qlev - Fv[m - 1]) / (Fv[m] - Fv[m - 1])
-  }
-  return(tau1)
-}
-
-tau <- seq(-1100, 1900, by = 1)
-calibDf <- baydem::bd_load_calib_curve("intcal13")
-equiInfo <- baydem::bd_assess_calib_curve_equif(calibDf)
-M <- bd_calc_meas_matrix(tau, mesorad$phi_m, mesorad$sig_m, calibDf, T, F)
-tau_0p5 <- calc_quantile_dates(M, tau, .5)
-
-
-fileName <- here::here("FigS4_maya_inference_K2_and_K10_with_rc_curve.pdf")
-pdf(fileName, width = 10, height = 10)
-par(
-  mfrow = c(2, 1),
-  xaxs = "i", # No padding for x-axis
-  yaxs = "i", # No padding for y-axis
-  # outer margins with ordering bottom, left, top, right:
-  oma = c(4, 2, 2, 2),
-  # plot margins with ordering bottom, left, top, right:
-  mar = c(2, 4, 0, 0)
-)
-
-# (1) Calibration curve
-par(mar = c(0, 4, 0, 0))
-bd_vis_calib_curve(-1100, 1900, calibDf, xlab = "", ylab = "Fraction Modern", xaxt = "n", invertCol = "gray80")
-box()
-
-par(mar = c(0, 4, 0, 0))
-hist(tau_0p5, breaks = seq(-1050, 1800, by = 50), xlab = "", ylab = "Density", main = NULL, yaxt = "n", freq = F, ylim = c(0, .002), xlim = c(-1100, 1900))
-
-t1_left <- equiInfo$invSpanList[[120]]$tau_right
-t1_right <- equiInfo$invSpanList[[121]]$tau_left
-t2_left <- equiInfo$invSpanList[[124]]$tau_right
-t2_right <- equiInfo$invSpanList[[125]]$tau_left
-phi1_left <- equiInfo$invSpanList[[120]]$phi_right
-phi1_right <- equiInfo$invSpanList[[121]]$phi_left
-phi2_left <- equiInfo$invSpanList[[124]]$phi_right
-phi2_right <- equiInfo$invSpanList[[125]]$phi_left
-ind1 <- (phi1_left <= mesorad$phi_m) & (mesorad$phi_m <= phi1_right)
-ind2 <- (phi2_left <= mesorad$phi_m) & (mesorad$phi_m <= phi2_right)
-N1 <- sum(ind1)
-N2 <- sum(ind2)
-
-bd_plot_50_percent_quantile(out_all_K10$anal, add = T, lwd = 3, col = "green")
-bd_add_shaded_quantiles(out_all_K10$anal, col = adjustcolor("green", alpha.f = 0.25))
-
-bd_plot_50_percent_quantile(out_all_K2$anal, add = T, lwd = 3, col = "red")
-bd_add_shaded_quantiles(out_all_K2$anal, col = adjustcolor("red", alpha.f = 0.25))
-
-rect(t1_left, 0.00050, t1_right, 0.0020, border = NA, col = adjustcolor("blue", alpha.f = .25))
-text((t1_left + t1_right) / 2, 0.00035, N1, cex = 1.5)
-rect(t2_left, 0.00070, t2_right, 0.0020, border = NA, col = adjustcolor("blue", alpha.f = .25))
-text((t2_left + t2_right) / 2, 0.00055, N2, cex = 1.5)
-
-box()
-
-axis(
-  side = 2,
-  at = c(0, 0.0005, 0.0010, 0.0015)
-)
-
-axis(side = 1)
-mtext("Calendar Date [AD]", side = 1, line = 2.5, cex = 1.00)
-dev.off()
-
-write.csv(data.frame(names = c("N1", "span1", "density1", "N2", "span2", "density2"), values = c(N1, t1_right - t1_left, N1 / (t1_right - t1_left), N2, t2_right - t2_left, N2 / (t2_right - t2_left))), "supp_count_data.csv")

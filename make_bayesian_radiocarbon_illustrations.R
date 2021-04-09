@@ -8,26 +8,24 @@ library(rcarbon)
 # Before plotting the illustration plots, compare baydem's calibration against
 # rcarbon's to ensure they give the same results.
 
-
-
 # The date to be calibrated, about 833 AD
 t_m   <- 1950 - 830 # The uncalibrated radiocarbon date in years before present
 sig_t_m <- 20       # The uncertainty of the measurement (20 "years")
 
 # Do the calibration in rcarbon
-rcarbonCalib <- rcarbon::calibrate(x=t_m,errors=sig_t_m,calCurves='intcal13',F14C=T,eps=1e-6)
+rcarbonCalib <- rcarbon::calibrate(x=t_m,errors=sig_t_m,calCurves='intcal20',F14C=T,eps=1e-6)
 
-# Now, do the calibration in baydem using the same gridding for the calendar
-# dates (tau)
-tau <- 1950 - rcarbonCalib$grids[[1]]$calBP
-dtau <- tau[2] - tau[1]
-tau_min <- min(tau)
-tau_mid <- mean(range(tau))
-tau_max <- max(tau)
+# Now, do the calibration in baydem using the same minimum and maximum for the
+# calendar dates (tau)
+tau_min <- 1950 - max(rcarbonCalib$grids[[1]]$calBP)
+tau_max <- 1950 - min(rcarbonCalib$grids[[1]]$calBP)
+tau_mid <- (tau_min + tau_max)/2
+dtau <- 1
+tau <- seq(tau_min,tau_max,by=dtau)
 
 # The calibration dataframe, which has three columns:
 # yearBP	uncalYearBP	uncalYearBPError
-calibDf = baydem::bd_load_calib_curve("intcal13")
+calibDf = baydem::bd_load_calib_curve("intcal20")
 
 # The reference decay rate of carbon
 kappa <- 8033
@@ -47,10 +45,24 @@ f_posterior_unif <- f_posterior_unif / sum(f_posterior_unif*dtau)
 
 # Do the actual check to ensure rcarbon and baydem give the same results
 # (within an appropriate tolerance)
+# The rcarbon result is not necessarily evenly spaced. Where a calendar date is
+# missing, set the density to zero
+f_rcarbon <- rep(NA,length(tau))
+for(k in 1:length(tau)) {
+  ind_k <- which(rcarbonCalib$grids[[1]]$calBP == 1950 - tau[k])
+  if(length(ind_k) == 0) {
+    f_rcarbon[k] <- 0
+  } else if(length(ind_k) == 1) {
+    f_rcarbon[k] <- rcarbonCalib$grids[[1]]$PrDens[ind_k]
+  } else {
+    stop('There should be 0 or 1 matches to tau[k] in rcarbonCalib$grids[[1]]$calBP')
+  }
+}
+
 testthat::expect_equal(
   f_posterior_unif,
-  rcarbonCalib$grids[[1]]$PrDens,
-  tol=1e-4
+  f_rcarbon,
+  tol=1e-6
 )
 
 # Calculate the posterior density assuming a triangular prior
