@@ -253,7 +253,7 @@ bchron10000 <-
                                     tau_plot,
                                     2)
 
-pdf("Fig1_non_bayesian_fits.pdf",width=5,height=2.5*num_plots)
+pdf("Fig2_non_bayesian_fits.pdf",width=5,height=2.5*num_plots)
 
   par(
     mfrow = c(num_plots, 1),
@@ -282,7 +282,20 @@ pdf("Fig1_non_bayesian_fits.pdf",width=5,height=2.5*num_plots)
   lines(tau_plot,f_ml100,col="red",lwd=2)
   lines(kde100$tau,kde100$f,col="grey",lwd=2)
   lines(bchron100$tau,bchron100$f,col="grey",lwd=2,lty=3)
-  #lines(kde100$tau,kde100$f,col="black",lwd=2,lty=3)
+  # Add a label inicating the value of N
+  text(
+    labels = "N = 100",
+    x = 600,
+    y = 0.009,
+    pos = 4,
+    cex = 2
+  )
+  # Add a legend (only to the top plot)
+  legend("topright",
+       legend = c("Target","Max. Lik.","SPD","Bchron Mix.","OxCal KDE"),
+       lty = c(1,1,1,3,1),
+       col = c("Blue","Red","Black","Grey","Grey"),
+       lwd = 2)
 
   # N=1000
   plot(tau_plot,
@@ -301,6 +314,14 @@ pdf("Fig1_non_bayesian_fits.pdf",width=5,height=2.5*num_plots)
   lines(tau_plot,f_ml1000,col="red",lwd=2)
   lines(kde1000$tau,kde1000$f,col="grey",lwd=2)
   lines(bchron1000$tau,bchron1000$f,col="grey",lwd=2,lty=3)
+  # Add a label inicating the value of N
+  text(
+    labels = "N = 1000",
+    x = 600,
+    y = 0.009,
+    pos = 4,
+    cex = 2
+  )
 
   # N=10000
   plot(tau_plot,
@@ -318,6 +339,14 @@ pdf("Fig1_non_bayesian_fits.pdf",width=5,height=2.5*num_plots)
   lines(tau_plot,f_spdf10000,col="black",lwd=2)
   lines(tau_plot,f_ml10000,col="red",lwd=2)
   lines(bchron10000$tau,bchron10000$f,col="grey",lwd=2,lty=3)
+  # Add a label inicating the value of N
+  text(
+    labels = "N = 10000",
+    x = 600,
+    y = 0.009,
+    pos = 4,
+    cex = 2
+  )
 
   axis(side = 1)
   mtext("Calendar Date [AD]", side = 1, line = 2.5, cex = 0.75)
