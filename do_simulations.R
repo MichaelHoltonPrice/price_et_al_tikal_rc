@@ -135,6 +135,15 @@ sim_spec <- list(model_spec=
 
 sim10000 <- simulate_rc_data(sim_spec)
 
+# Write out information about the range and mean of uncertainties in radiocarbon
+# years for the section Model Validation: Simulations.
+yaml::write_yaml(
+  list(sig_trc_min=plyr::round_any(min(sim10000$data$rc_meas$sig_trc_m),.1),
+       sig_trc_mean=plyr::round_any(mean(sim10000$data$rc_meas$sig_trc_m),.1),
+       sig_trc_max=plyr::round_any(max(sim10000$data$rc_meas$sig_trc_m),.1)),
+  "sig_trc_summary.yaml"
+)
+
 # ------------------------------------------------------------------------------
 # (2) For each of N=100, N=1000, and N=10000, do a maximum likelihood fit to
 # data (checking first whether a save file already exists for each maximum
