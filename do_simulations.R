@@ -383,6 +383,7 @@ density_model <- list(type="trunc_gauss_mix",
                       tau_max=tau_max,
                       K=2)
 
+# Do the inference
 bayesian_soln_list <- list()
 stan_seeds <- c(433582,774538,979639)
 control <- list(samps_per_chain=4500,
@@ -413,3 +414,195 @@ for(m_N in 1:length(Nvect)) {
     )
   }
 }
+
+# Calculate summary measures for the inference
+bayesian_summ_list <- list()
+#stan_seeds <- c(433582,774538,979639)
+for(m_N in 1:length(Nvect)) {
+  N <- Nvect[m_N]
+  save_file <- paste0("bayesian_summ",N,".rds")
+#  seed <- stan_seeds[m_N]
+  if (!file.exists(save_file)) {
+    phi_m <- sim10000$data$rc_meas$phi_m[1:N]
+    sig_m <- sim10000$data$rc_meas$sig_m[1:N]
+    rc_meas <- list(phi_m=phi_m,sig_m=sig_m)
+    bayesian_summ <- summarize_bayesian_inference(bayesian_soln_list[[m_N]],
+                                                  rc_meas,
+                                                  density_model,
+                                                  calib_df,
+                                                  dtau=1,
+                                                  th_sim=th_sim)
+
+    bayesian_summ_list[[m_N]] <- bayesian_summ
+    saveRDS(bayesian_summ_list[[m_N]],save_file)
+  } else {
+    bayesian_summ_list[[m_N]] <- readRDS(save_file)
+  }
+}
+
+# ------------------------------------------------------------------------------
+# (5) Create plots for Bayesian fits for each N (and also an initial plot
+#     visualizing the calibratrion curve)
+# ------------------------------------------------------------------------------
+num_plots <- 4
+pdf("Fig3_bayesian_fits.pdf",width=5,height=2.5*num_plots)
+
+  par(
+    mfrow = c(num_plots, 1),
+    xaxs = "i", # No padding for x-axis
+    yaxs = "i", # No padding for y-axis
+    # outer margins with ordering bottom, left, top, right:
+    oma = c(4, 2, 2, 2),
+    # plot margins with ordering bottom, left, top, right:
+    mar = c(2, 4, 0, 0)
+  )
+
+  # (1) Add the calibration curve (first plot)
+  par(mar = c(0, 4, 0, 0))
+  vis_calib_curve(
+    tau_min,
+    tau_max,
+    calib_df,
+    xlab = "",
+    ylab = "Fraction Modern",
+    xaxt = "n",
+    invert_col = "gray80"
+  )
+  box()
+
+  # N = 100
+  # Make a blank plot
+  make_blank_density_plot(bayesian_summ_list[[1]],
+    ylim = c(0, 0.01),
+    xlab = "",
+    ylab = "Density",
+    xaxt = "n",
+    yaxt = "n"
+  )
+
+  # Add the shaded quantiles
+  add_shaded_quantiles(bayesian_summ_list[[1]],
+    col = "gray80"
+  )
+
+  # Add the summed probability density
+  plot_summed_density(bayesian_summ_list[[1]],
+    lwd = 2,
+    add = T,
+    col = "black"
+  )
+
+  # Add solid 50% quantile
+  plot_50_percent_quantile(bayesian_summ_list[[1]],
+    lwd = 2,
+    add = T,
+    col = "red"
+  )
+
+  # Plot the known, target distribution
+  plot_known_sim_density(bayesian_summ_list[[1]],
+    lwd = 2,
+    add = T,
+    col = "blue"
+  )
+
+  text(
+    labels = "N = 100",
+    x = 600,
+    y = 0.009,
+    pos = 4,
+    cex = 2
+  )
+
+  # N = 1000
+  # Make a blank plot
+  make_blank_density_plot(bayesian_summ_list[[2]],
+    ylim = c(0, 0.01),
+    xlab = "",
+    ylab = "Density",
+    xaxt = "n",
+    yaxt = "n"
+  )
+
+  # Add the shaded quantiles
+  add_shaded_quantiles(bayesian_summ_list[[2]],
+    col = "gray80"
+  )
+
+  # Add the summed probability density
+  plot_summed_density(bayesian_summ_list[[2]],
+    lwd = 2,
+    add = T,
+    col = "black"
+  )
+
+  # Add solid 50% quantile
+  plot_50_percent_quantile(bayesian_summ_list[[2]],
+    lwd = 2,
+    add = T,
+    col = "red"
+  )
+
+  # Plot the known, target distribution
+  plot_known_sim_density(bayesian_summ_list[[2]],
+    lwd = 2,
+    add = T,
+    col = "blue"
+  )
+
+  text(
+    labels = "N = 1000",
+    x = 600,
+    y = 0.009,
+    pos = 4,
+    cex = 2
+  )
+
+  # N = 10000
+  # Make a blank plot
+  make_blank_density_plot(bayesian_summ_list[[3]],
+    ylim = c(0, 0.01),
+    xlab = "",
+    ylab = "Density",
+    xaxt = "n",
+    yaxt = "n"
+  )
+
+  # Add the shaded quantiles
+  add_shaded_quantiles(bayesian_summ_list[[3]],
+    col = "gray80"
+  )
+
+  # Add the summed probability density
+  plot_summed_density(bayesian_summ_list[[3]],
+    lwd = 2,
+    add = T,
+    col = "black"
+  )
+
+  # Add solid 50% quantile
+  plot_50_percent_quantile(bayesian_summ_list[[3]],
+    lwd = 2,
+    add = T,
+    col = "red"
+  )
+
+  # Plot the known, target distribution
+  plot_known_sim_density(bayesian_summ_list[[3]],
+    lwd = 2,
+    add = T,
+    col = "blue"
+  )
+
+  text(
+    labels = "N = 1000",
+    x = 600,
+    y = 0.009,
+    pos = 4,
+    cex = 2
+  )
+
+  # Add an axis and label to the final, bottom plot
+  axis(side = 1)
+  mtext("Calendar Date [AD]", side = 1, line = 2.5, cex = 0.75)
+dev.off()
