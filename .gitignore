@@ -20,5 +20,13 @@ R/.DS_Store
 
 .idea
 
+# Don't track results files
 *.rds
 *~
+*.pdf
+SuppB_exp.csv
+mesorad_combined.csv
+mesorad_filtered.csv
+mesorad_final.csv
+sig_trc_summary.yaml
+supp_count_data.csv

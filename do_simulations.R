@@ -24,7 +24,7 @@ write_KDE_Plot_model <- function(trc_m,sig_trc_m,file_name) {
   sink()
 }
 
-# Load the result of a KDE fit done externally using the KDE web inteface.
+# Load the result of a KDE fit done externally using the OxCal web inteface.
 load_KDE_Plot_fit <- function(file_name) {
   data_frame <- read.table(file_name,sep="\t")
   tau <- as.vector(data_frame[,1])
@@ -194,7 +194,7 @@ for(m_N in 1:length(Nvect)) {
 # (e) An OxCal KDE (for N=100 and N=1000)
 #
 # This yields the following publication result(s):
-# Fig1_non_bayesian_fits.pdf
+# Fig2_non_bayesian_fits.pdf
 # ------------------------------------------------------------------------------
 
 # Write the KDE plots
@@ -370,9 +370,9 @@ hp <- list(
     # Parameter for the dirichlet draw of the mixture probabilities
     alpha_d = 1,
     # The gamma distribution shape parameter for sigma
-    alpha_s = 3,
+    alpha_s = 10,
     # The gamma distribution rate parameter for sigma, yielding a mode of 100
-    alpha_r = (3 - 1) / 100,
+    alpha_r = (10 - 1) / 50,
     # The spacing for the Riemann sum (i.e., for the measurement matrix)
     dtau = 1
 )
