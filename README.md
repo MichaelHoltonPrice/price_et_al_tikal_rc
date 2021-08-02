@@ -75,7 +75,7 @@ This repository contains the following files:
 If necessary, set the R working directory to the directory with the files (e.g., using setwd). Then run the following script in R:
 
 ```R
-source("Fig1_single_date_calibration.pdf")
+source("make_bayesian_radiocarbon_illustrations.R")
 ```
 
 This will generate the following file:
