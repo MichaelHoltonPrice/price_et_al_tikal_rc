@@ -97,7 +97,7 @@ This will generate the following files:
 Run the following script in R:
 
 ```R
-source("create_identif_results_exp.R")
+source("create_identif_results_gm.R")
 ```
 
 This will generate the following file:
