@@ -24,6 +24,7 @@ write_KDE_Plot_model <- function(trc_m,sig_trc_m,file_name) {
   sink()
 }
 
+# TODO: error check the input values in the Oxcal save files
 # Load the result of a KDE fit done externally using the OxCal web inteface.
 load_KDE_Plot_fit <- function(file_name) {
   data_frame <- read.table(file_name,sep="\t")
