@@ -138,4 +138,9 @@ source("do_Maya_inference.R")
 
 TODO: add Maya files
 
-TODO: add and describe script to copy all results files to /data if using a Docker container
+## If running in a Docker container, copy results files
+Run the following script in R:
+
+```R
+source("do_simulations.R")
+```
