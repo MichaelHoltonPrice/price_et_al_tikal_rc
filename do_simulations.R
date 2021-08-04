@@ -3,9 +3,19 @@ library(magrittr)
 library(Bchron)
 library(testthat)
 
+# Simulation results are created by calling, in turn, the following two scripts:
+#
+# (1) do_simulations.R [this script]
+# (2) create_simulation_plots.R
+#
+# Aside from doing fits and Bayesian inference, do_simulations.R creates OxCal
+# KDE models that are run using the OxCal web interface prior to creating the
+# final publication results using create_simulation_plots.R.
+
 # ------------------------------------------------------------------------------
 # (0) Define functions used below
 # ------------------------------------------------------------------------------
+
 # Write files for doing KDE Plot fits with OxCal in the format expected by OxCal
 write_KDE_Plot_model <- function(trc_m,sig_trc_m,file_name) {
   sink(file_name)
@@ -22,20 +32,6 @@ write_KDE_Plot_model <- function(trc_m,sig_trc_m,file_name) {
   }
   cat('};\n')
   sink()
-}
-
-# TODO: error check the input values in the Oxcal save files
-# Load the result of a KDE fit done externally using the OxCal web inteface.
-load_KDE_Plot_fit <- function(file_name) {
-  data_frame <- read.table(file_name,sep="\t")
-  tau <- as.vector(data_frame[,1])
-  f   <- as.vector(data_frame[,2])
-  dtau <- unique(diff(tau))
-  if (length(dtau) != 1) {
-    stop("Spacing of tau is not even")
-  }
-  f <- f/sum(f)/dtau
-  return(list(tau=tau,f=f))
 }
 
 # Do a Gaussian mixture fit to samples drawn from the posterior densities of
@@ -92,7 +88,9 @@ do_BchronDensityFast_modified_fit <- function(trc_m,sig_trc_m,tau,K) {
 # ------------------------------------------------------------------------------
 # (1) Generate simulated data for N=10000 observations using the function
 # baydem::simulate_rc_data, then subset the simulation to create simulations
-# with N=100 and 1000 observations.
+# with N=100 and 1000 observations. If a save file with the simulation data
+# has already been created, load the simulation data rather than creating
+# the data again.
 # ------------------------------------------------------------------------------
 
 # Create the "target", simulation parameter vector, th_sim. The simulation
@@ -100,7 +98,6 @@ do_BchronDensityFast_modified_fit <- function(trc_m,sig_trc_m,tau,K) {
 # mu2, sig1, sig2, and for which the truncation limits are tau_min = AD 600 and
 # tau_max = AD 1300. The truncation has negligible effect since the probability
 # density is exceedingly small at the truncation boundaries.
-
 th_sim <-
   c(
     pi1 = 0.2,
@@ -134,7 +131,14 @@ sim_spec <- list(model_spec=
                  calib_curve=calib_curve,
                  seed=93004)
 
-sim10000 <- simulate_rc_data(sim_spec)
+sim_file <- "sim10000.rds"
+
+if (!file.exists(sim_file)) {
+  sim10000 <- simulate_rc_data(sim_spec)
+  saveRDS(sim10000, sim_file)
+} else {
+  sim10000 <- readRDS(sim_file)
+}
 
 # Write out information about the range and mean of uncertainties in radiocarbon
 # years for the section Model Validation: Simulations.
@@ -144,6 +148,22 @@ yaml::write_yaml(
        sig_trc_max=plyr::round_any(max(sim10000$data$rc_meas$sig_trc_m),.1)),
   "sig_trc_summary.yaml"
 )
+
+# (2) For each of N=100, N=1000, and N=10000, write the KDE Plot model to file
+# (checking first whether a save file already exists for each case). These files
+# can be run in OxCal's web interface to yield the curves that are plotted in
+# create_simulation_plots.R. The OxCal web inteface cannot successfully run the
+# N=10000 model, but it is written out anyway.
+Nvect <- c(100,1000,10000)
+for(m_N in 1:length(Nvect)) {
+  N <- Nvect[m_N]
+  save_file <- paste0("KDE_input_",N,".txt")
+  if (!file.exists(save_file)) {
+    trc_m     <- sim10000$data$rc_meas$trc_m    [1:N]
+    sig_trc_m <- sim10000$data$rc_meas$sig_trc_m[1:N]
+    write_KDE_Plot_model(trc_m,sig_trc_m,save_file)
+  }
+}
 
 # ------------------------------------------------------------------------------
 # (2) For each of N=100, N=1000, and N=10000, do a maximum likelihood fit to
@@ -155,7 +175,6 @@ yaml::write_yaml(
 max_lik_fit_seeds <- c(739037,217298,971210)
 num_cores <- 10
 
-Nvect <- c(100,1000,10000)
 max_lik_fit_list <- list()
 for(m_N in 1:length(Nvect)) {
   N <- Nvect[m_N]
@@ -186,185 +205,35 @@ for(m_N in 1:length(Nvect)) {
 }
 
 # ------------------------------------------------------------------------------
-# (3) Create plots for non-Bayesian "fits" for each N. Curves included are:
-#
-# (a) The target density
-# (b) The maximum likelihood fit
-# (c) The summed density
-# (d) A Bchron mixture fit
-# (e) An OxCal KDE (for N=100 and N=1000)
-#
-# This yields the following publication result(s):
-# Fig2_non_bayesian_fits.pdf
+# (3) For each of N=100, N=1000, and N=10000, do a Bchron mixture fit (checking
+# first whether a save file already exists for each Bchron mixture fit). Use
+# random number seeds for reproducibility.
 # ------------------------------------------------------------------------------
-
-# Write the KDE plots
+bchron_fit_seeds <- c(736877,860006,375035)
+bchron_fit_list <- list()
+tau_plot <- seq(tau_min,tau_max,by=dtau)
 for(m_N in 1:length(Nvect)) {
   N <- Nvect[m_N]
-  save_file <- paste0("KDE_input_",N,".txt")
-  trc_m <- sim10000$data$rc_meas$trc_m[1:N]
-  sig_trc_m <- sim10000$data$rc_meas$sig_trc_m[1:N]
-  write_KDE_Plot_model(trc_m,sig_trc_m,save_file)
+  save_file <- paste0("bchron_fit",N,".rds")
+  seed <- bchron_fit_seeds[m_N]
+  if (!file.exists(save_file)) {
+    set.seed(bchron_fit_seeds[m_N])
+    trc_m     <- sim10000$data$rc_meas$trc_m    [1:N]
+    sig_trc_m <- sim10000$data$rc_meas$sig_trc_m[1:N]
+    bchron_fit_list[[m_N]] <- do_BchronDensityFast_modified_fit(trc_m,
+                                                                sig_trc_m,
+                                                                tau_plot,
+                                                                2)
+    saveRDS(bchron_fit_list[[m_N]],save_file)
+  } else {
+    bchron_fit_list[[m_N]] <- readRDS(save_file)
+  }
 }
 
-# Show non-Bayesian fits
-num_plots <- 3
-tau_plot <- seq(tau_min,tau_max,by=dtau)
-f_sim <- calc_gauss_mix_pdf(th_sim,tau_plot,tau_min=tau_min,tau_max=tau_max)
-
-M100 <- calc_meas_matrix(tau_plot,
-                         sim10000$data$rc_meas$phi_m[1:100],
-                         sim10000$data$rc_meas$sig_m[1:100],
-                         calib_df
-                         )
-M100 <- M100 / replicate(length(tau_plot),rowSums(M100)*dtau)
-f_spdf100 <- colMeans(M100)
-f_ml100 <- calc_gauss_mix_pdf(max_lik_fit_list[[1]]$th,
-                              tau_plot,
-                              tau_min=tau_min,
-                              tau_max=tau_max)
-kde100 <- load_KDE_Plot_fit("posterior_from_oxcal_100.txt")
-bchron100 <-
-  do_BchronDensityFast_modified_fit(sim10000$data$rc_meas$trc_m[1:100],
-                                    sim10000$data$rc_meas$sig_trc_m[1:100],
-                                    tau_plot,
-                                    2)
-M1000 <- calc_meas_matrix(tau_plot,
-                          sim10000$data$rc_meas$phi_m[1:1000],
-                          sim10000$data$rc_meas$sig_m[1:1000],
-                          calib_df
-                          )
-M1000 <- M1000 / replicate(length(tau_plot),rowSums(M1000)*dtau)
-f_spdf1000 <- colMeans(M1000)
-f_ml1000 <- calc_gauss_mix_pdf(max_lik_fit_list[[2]]$th,
-                               tau_plot,
-                               tau_min=tau_min,
-                               tau_max=tau_max)
-kde1000 <- load_KDE_Plot_fit("posterior_from_oxcal_1000.txt")
-bchron1000 <-
-  do_BchronDensityFast_modified_fit(sim10000$data$rc_meas$trc_m[1:1000],
-                                    sim10000$data$rc_meas$sig_trc_m[1:1000],
-                                    tau_plot,
-                                    2)
-M10000 <- calc_meas_matrix(tau_plot,
-                           sim10000$data$rc_meas$phi_m,
-                           sim10000$data$rc_meas$sig_m,
-                           calib_df
-                           )
-M10000 <- M10000 / replicate(length(tau_plot),rowSums(M10000)*dtau)
-f_spdf10000 <- colMeans(M10000)
-f_ml10000 <- calc_gauss_mix_pdf(max_lik_fit_list[[3]]$th,
-                                tau_plot,
-                                tau_min=tau_min,
-                                tau_max=tau_max)
-bchron10000 <-
-  do_BchronDensityFast_modified_fit(sim10000$data$rc_meas$trc_m,
-                                    sim10000$data$rc_meas$sig_trc_m,
-                                    tau_plot,
-                                    2)
-
-pdf("Fig2_non_bayesian_fits.pdf",width=5,height=2.5*num_plots)
-
-  par(
-    mfrow = c(num_plots, 1),
-    xaxs = "i", # No padding for x-axis
-    yaxs = "i", # No padding for y-axis
-    # outer margins with ordering bottom, left, top, right:
-    oma = c(4, 2, 2, 2),
-    # plot margins with ordering bottom, left, top, right:
-    mar = c(2, 4, 0, 0)
-  )
-
-  # N=100
-  plot(tau_plot,
-       f_sim,
-       xlim=c(tau_min,tau_max),
-       ylim=c(0,0.01),
-       xlab = "",
-       ylab = "Density",
-       xaxt = "n",
-       yaxt = "n",
-       col="blue",
-       type="l",
-       lwd=2
-      )
-  lines(tau_plot,f_spdf100,col="black",lwd=2)
-  lines(tau_plot,f_ml100,col="red",lwd=2)
-  lines(kde100$tau,kde100$f,col="grey",lwd=2)
-  lines(bchron100$tau,bchron100$f,col="grey",lwd=2,lty=3)
-  # Add a label inicating the value of N
-  text(
-    labels = "N = 100",
-    x = 600,
-    y = 0.009,
-    pos = 4,
-    cex = 2
-  )
-  # Add a legend (only to the top plot)
-  legend("topright",
-       legend = c("Target","Max. Lik.","SPD","Bchron Mix.","OxCal KDE"),
-       lty = c(1,1,1,3,1),
-       col = c("Blue","Red","Black","Grey","Grey"),
-       lwd = 2)
-
-  # N=1000
-  plot(tau_plot,
-       f_sim,
-       xlim=c(tau_min,tau_max),
-       ylim=c(0,0.01),
-       xlab = "",
-       ylab = "Density",
-       xaxt = "n",
-       yaxt = "n",
-       col="blue",
-       type="l",
-       lwd=2
-      )
-  lines(tau_plot,f_spdf1000,col="black",lwd=2)
-  lines(tau_plot,f_ml1000,col="red",lwd=2)
-  lines(kde1000$tau,kde1000$f,col="grey",lwd=2)
-  lines(bchron1000$tau,bchron1000$f,col="grey",lwd=2,lty=3)
-  # Add a label inicating the value of N
-  text(
-    labels = "N = 1000",
-    x = 600,
-    y = 0.009,
-    pos = 4,
-    cex = 2
-  )
-
-  # N=10000
-  plot(tau_plot,
-       f_sim,
-       xlim=c(tau_min,tau_max),
-       ylim=c(0,0.01),
-       xlab = "",
-       ylab = "Density",
-       xaxt = "n",
-       yaxt = "n",
-       col="blue",
-       type="l",
-       lwd=2
-      )
-  lines(tau_plot,f_spdf10000,col="black",lwd=2)
-  lines(tau_plot,f_ml10000,col="red",lwd=2)
-  lines(bchron10000$tau,bchron10000$f,col="grey",lwd=2,lty=3)
-  # Add a label inicating the value of N
-  text(
-    labels = "N = 10000",
-    x = 600,
-    y = 0.009,
-    pos = 4,
-    cex = 2
-  )
-
-  axis(side = 1)
-  mtext("Calendar Date [AD]", side = 1, line = 2.5, cex = 0.75)
-
-dev.off()
-
 # ------------------------------------------------------------------------------
-# (4) Do Bayesian sampling for each N
+# (4) Do Bayesian sampling for each N. As with previous steps, use random number
+# seeds for reproducibility and load simulations from a save file if one exists.
+# Also call summarize_bayesian_inference for each simulation.
 # ------------------------------------------------------------------------------
 # Set the hyperparameters
 hp <- list(
@@ -418,11 +287,9 @@ for(m_N in 1:length(Nvect)) {
 
 # Calculate summary measures for the inference
 bayesian_summ_list <- list()
-#stan_seeds <- c(433582,774538,979639)
 for(m_N in 1:length(Nvect)) {
   N <- Nvect[m_N]
   save_file <- paste0("bayesian_summ",N,".rds")
-#  seed <- stan_seeds[m_N]
   if (!file.exists(save_file)) {
     phi_m <- sim10000$data$rc_meas$phi_m[1:N]
     sig_m <- sim10000$data$rc_meas$sig_m[1:N]
@@ -440,170 +307,3 @@ for(m_N in 1:length(Nvect)) {
     bayesian_summ_list[[m_N]] <- readRDS(save_file)
   }
 }
-
-# ------------------------------------------------------------------------------
-# (5) Create plots for Bayesian fits for each N (and also an initial plot
-#     visualizing the calibratrion curve)
-# ------------------------------------------------------------------------------
-num_plots <- 4
-pdf("Fig3_bayesian_fits.pdf",width=5,height=2.5*num_plots)
-
-  par(
-    mfrow = c(num_plots, 1),
-    xaxs = "i", # No padding for x-axis
-    yaxs = "i", # No padding for y-axis
-    # outer margins with ordering bottom, left, top, right:
-    oma = c(4, 2, 2, 2),
-    # plot margins with ordering bottom, left, top, right:
-    mar = c(2, 4, 0, 0)
-  )
-
-  # (1) Add the calibration curve (first plot)
-  par(mar = c(0, 4, 0, 0))
-  vis_calib_curve(
-    tau_min,
-    tau_max,
-    calib_df,
-    xlab = "",
-    ylab = "Fraction Modern",
-    xaxt = "n",
-    invert_col = "gray80"
-  )
-  box()
-
-  # N = 100
-  # Make a blank plot
-  make_blank_density_plot(bayesian_summ_list[[1]],
-    ylim = c(0, 0.01),
-    xlab = "",
-    ylab = "Density",
-    xaxt = "n",
-    yaxt = "n"
-  )
-
-  # Add the shaded quantiles
-  add_shaded_quantiles(bayesian_summ_list[[1]],
-    col = "gray80"
-  )
-
-  # Add the summed probability density
-  plot_summed_density(bayesian_summ_list[[1]],
-    lwd = 2,
-    add = T,
-    col = "black"
-  )
-
-  # Add solid 50% quantile
-  plot_50_percent_quantile(bayesian_summ_list[[1]],
-    lwd = 2,
-    add = T,
-    col = "red"
-  )
-
-  # Plot the known, target distribution
-  plot_known_sim_density(bayesian_summ_list[[1]],
-    lwd = 2,
-    add = T,
-    col = "blue"
-  )
-
-  text(
-    labels = "N = 100",
-    x = 600,
-    y = 0.009,
-    pos = 4,
-    cex = 2
-  )
-
-  # N = 1000
-  # Make a blank plot
-  make_blank_density_plot(bayesian_summ_list[[2]],
-    ylim = c(0, 0.01),
-    xlab = "",
-    ylab = "Density",
-    xaxt = "n",
-    yaxt = "n"
-  )
-
-  # Add the shaded quantiles
-  add_shaded_quantiles(bayesian_summ_list[[2]],
-    col = "gray80"
-  )
-
-  # Add the summed probability density
-  plot_summed_density(bayesian_summ_list[[2]],
-    lwd = 2,
-    add = T,
-    col = "black"
-  )
-
-  # Add solid 50% quantile
-  plot_50_percent_quantile(bayesian_summ_list[[2]],
-    lwd = 2,
-    add = T,
-    col = "red"
-  )
-
-  # Plot the known, target distribution
-  plot_known_sim_density(bayesian_summ_list[[2]],
-    lwd = 2,
-    add = T,
-    col = "blue"
-  )
-
-  text(
-    labels = "N = 1000",
-    x = 600,
-    y = 0.009,
-    pos = 4,
-    cex = 2
-  )
-
-  # N = 10000
-  # Make a blank plot
-  make_blank_density_plot(bayesian_summ_list[[3]],
-    ylim = c(0, 0.01),
-    xlab = "",
-    ylab = "Density",
-    xaxt = "n",
-    yaxt = "n"
-  )
-
-  # Add the shaded quantiles
-  add_shaded_quantiles(bayesian_summ_list[[3]],
-    col = "gray80"
-  )
-
-  # Add the summed probability density
-  plot_summed_density(bayesian_summ_list[[3]],
-    lwd = 2,
-    add = T,
-    col = "black"
-  )
-
-  # Add solid 50% quantile
-  plot_50_percent_quantile(bayesian_summ_list[[3]],
-    lwd = 2,
-    add = T,
-    col = "red"
-  )
-
-  # Plot the known, target distribution
-  plot_known_sim_density(bayesian_summ_list[[3]],
-    lwd = 2,
-    add = T,
-    col = "blue"
-  )
-
-  text(
-    labels = "N = 1000",
-    x = 600,
-    y = 0.009,
-    pos = 4,
-    cex = 2
-  )
-
-  # Add an axis and label to the final, bottom plot
-  axis(side = 1)
-  mtext("Calendar Date [AD]", side = 1, line = 2.5, cex = 0.75)
-dev.off()
