@@ -3,6 +3,9 @@ library(magrittr)
 library(Bchron)
 library(testthat)
 
+# Clear the workspace
+rm(list=ls())
+
 # Simulation results are created by calling, in turn, the following two scripts:
 #
 # (1) do_simulations.R [this script]
@@ -252,6 +255,10 @@ density_model <- list(type="trunc_gauss_mix",
                       tau_min=tau_min,
                       tau_max=tau_max,
                       K=2)
+
+# Save hp and density_model to file
+saveRDS(hp, "hp.rds")
+saveRDS(density_model, "density_model.rds")
 
 # Do the inference
 bayesian_soln_list <- list()
