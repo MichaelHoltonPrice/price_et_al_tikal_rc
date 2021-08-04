@@ -79,9 +79,9 @@ f_posterior_tria <- f_prior_tria * lik
 f_posterior_tria <- f_posterior_tria / sum(f_posterior_tria*dtau)
 
 
-fileName <- here::here("Fig1_single_date_calibration.pdf")
+file_name <- file.path("outputs", "Fig1_single_date_calibration.pdf")
 ### FIGURE 1: Calibration of a single date (using two priors)
-pdf(fileName, width = 10, height = 6)
+pdf(file_name, width = 10, height = 6)
   plot(tau,
        f_prior_unif,
        col='black',
