@@ -1,6 +1,6 @@
 library(baydem)
 
-source(here::here("bayesian_radiocarbon_functions.R"))
+source("bayesian_radiocarbon_functions.R")
 
 set.seed(183450) # from random.org between 1 and 1,000,000
 
@@ -32,7 +32,7 @@ for (kk in 1:length(equi_list)) {
 
 tau_vect2 <- sort(tau_vect2)
 
-pdf(here::here("FigS1_exp_example.pdf"), width = 20, height = 18)
+pdf(file.path("outputs", "FigS1_exp_example.pdf"), width = 20, height = 18)
 # There are three rows of plots. The top row has a single, long plot. The next
 # two rows rows have three plots each.
 layout(matrix(c(1, 1, 1, 2, 3, 4, 5, 6, 7), 3, 3, byrow = TRUE))
@@ -107,4 +107,4 @@ tibble::tibble(
   Parameter = names(outlog),
   Value = unlist(outlog)
 ) %T>%
-  readr::write_csv(here::here("SuppB_exp.csv"))
+  readr::write_csv(file.path("outputs","SuppB_exp.csv"))
