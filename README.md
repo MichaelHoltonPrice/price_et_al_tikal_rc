@@ -53,7 +53,7 @@ This repository contains the following files (see below for why the first two in
 -   Input data files:
     -   outputs/posterior_from_oxcal_100.txt
     -   outputs/posterior_from_oxcal_1000.txt
-    -   MesoRAD-v.1.2\_no_locations.xlsx
+    -   MesoRAD-v.1.2_no_locations.xlsx
     -   Tikal_Demography.xlsx
 -   R files:
     -   bayesian_radiocarbon_functions.R
@@ -67,6 +67,11 @@ This repository contains the following files (see below for why the first two in
     -   LICENSE.md
     -   README.md
 
+## Rather than running each individual script as described in the remainder of this README, all the scripts can be run with the following command:
+```R
+source("run_all_analysis_scripts.R")
+```
+
 ## Create the Bayesian inference publication plot
 If necessary, set the R working directory to the directory with the files (e.g., using setwd). Then run the following script in R:
 
@@ -75,7 +80,7 @@ source("create_Fig1.R")
 ```
 
 This will generate the following file:
--   outputs/Fig1\_single\_date\_calibration.pdf
+-   outputs/Fig1_single_date_calibration.pdf
 
 ## Create the exponential identifiability results
 Run the following script in R:
@@ -85,8 +90,8 @@ source("create_identif_results_exp.R")
 ```
 
 This will generate the following files:
--   outputs/FigS1\_exp\_example.pdf
--   outputs/SuppB\_exp.csv
+-   outputs/FigS1_exp_example.pdf
+-   outputs/SuppB_exp.csv
 
 ## Create the Gaussian mixture (gm) identifiability results
 
@@ -99,6 +104,8 @@ source("create_identif_results_gm.R")
 This will generate the following files:
 -    outputs/FigS2_gm_example.pdf
 -    outputs/create_identif_results_gm_sink.R
+
+create_identif_results_gm_sink.R contains the print statements from running the script, which indicates whether any identifiability issues were identified (none were).
 
 ## Create the simulation results
 The simulation results are created in three steps: (1) run "do_simulations.R", (2) use the Oxcal web interface, https://c14.arch.ox.ac.uk/oxcal/, to create the KDE results. (3) Run "create_simulation_plots.R".
@@ -135,6 +142,8 @@ This will generate the following files:
 -    outputs/bayesian_summ100.rds
 -    outputs/bayesian_summ1000.rds
 -    outputs/bayesian_summ10000.rds
+-    outputs/tikal.rds
+-    outputs/all.rds
 
 (2) Use the Oxcal web interface to create the following to files using the models in KDE_input_100.txt and KDE_input_1000.txt:
 
@@ -159,7 +168,7 @@ This will generate the following files:
 Run the following script in R to do the Bayesian inference (the plots are created using the ensuing script):
 
 ```R
-source("do_Maya_inference.R")
+source("do_maya_inference.R")
 ```
 
 This will generate the following files:
@@ -171,7 +180,15 @@ This will generate the following files:
 -    outputs/tikal.rds
 -    outputs/all.rds
 
-TODO: add plotting script once it is finalized
+Run the following script in R to make publication results:
+
+```R
+source("do_maya_inference.R")
+```
+
+This will generate the following files:
+-    outputs/FigS3_tikal_waic.pdf
+-    outputs/FigS4_all_waic.pdf
 
 ## If running in a Docker container, copy results files
 If necessary, exit R:

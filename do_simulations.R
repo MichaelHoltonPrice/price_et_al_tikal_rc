@@ -149,7 +149,7 @@ yaml::write_yaml(
   list(sig_trc_min=plyr::round_any(min(sim10000$data$rc_meas$sig_trc_m),.1),
        sig_trc_mean=plyr::round_any(mean(sim10000$data$rc_meas$sig_trc_m),.1),
        sig_trc_max=plyr::round_any(max(sim10000$data$rc_meas$sig_trc_m),.1)),
-  "sig_trc_summary.yaml"
+  file.path("outputs","sig_trc_summary.yaml")
 )
 
 # (2) For each of N=100, N=1000, and N=10000, write the KDE Plot model to file

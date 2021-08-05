@@ -67,3 +67,7 @@ outputs/site_counts.yaml
 outputs/maya_hp.rds
 outputs/tikal.rds
 outputs/all.rds
+
+# Outputs of create_maya_plots.R
+outputs/FigS3_tikal_waic.pdf
+outputs/FigS4_all_waic.pdf

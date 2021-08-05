@@ -1,4 +1,3 @@
-#### begin up to date analysis
 rm(list = ls())
 
 library(baydem)
@@ -189,7 +188,6 @@ mesorad$trc_m <- mesorad[,"Conventional 14C age (BP)"]
 mesorad$sig_trc_m <- mesorad[,"Error"]
 
 # Calculate the fraction modern and associated uncertainty for all data
-# TODO: triple check these formulas
 mesorad$phi_m <- exp(-mesorad$trc_m/8033)
 mesorad$sig_m <- mesorad$sig_trc_m * mesorad$phi_m / 8033
 
@@ -210,7 +208,6 @@ hp <-
 saveRDS(hp, file.path("outputs","maya_hp.rds"))
 
 # If necessary, do the Bayesian inference for the Tikal observations
-# TODO: change upper value of K from 3 back to 6
 tikal_file <- file.path(data_dir, "tikal.rds")
 if (!file.exists(tikal_file)) {
   set_rc_meas(data_dir,
@@ -219,7 +216,7 @@ if (!file.exists(tikal_file)) {
   set_density_model(data_dir, "tikal", list(type="trunc_gauss_mix",
                                             tau_min=-1100,
                                             tau_max=1900,
-                                            K=2:3))
+                                            K=2:6))
   set_calib_curve(data_dir, "tikal", "intcal20")
   do_bayesian_inference(data_dir,
                       "tikal",
@@ -232,25 +229,25 @@ if (!file.exists(tikal_file)) {
 }
 
 # If necessary, do the Bayesian inference for All observations
-#all_file <- file.path(data_dir, "all.rds")
-#if (!file.exists(all_file)) {
-#  set_rc_meas(data_dir,
-#              "all",
-#              mesorad)
-#
-#  set_density_model(data_dir, "all", list(type="trunc_gauss_mix",
-#                                          tau_min=-1100,
-#                                          tau_max=1900,
-#                                          K=2:3))
-#
-#  set_calib_curve(data_dir, "all", "intcal20")
-#
-#  do_bayesian_inference(data_dir,
-#                        "all",
-#                        hp,
-#                        input_seed=75539,
-#                        control=list(num_chains = 4,
-#                                     samps_per_chain = 4500,
-#                                     warmup = 2000)
-#                       )
-#}
+all_file <- file.path(data_dir, "all.rds")
+if (!file.exists(all_file)) {
+  set_rc_meas(data_dir,
+              "all",
+              mesorad)
+
+  set_density_model(data_dir, "all", list(type="trunc_gauss_mix",
+                                          tau_min=-1100,
+                                          tau_max=1900,
+                                          K=2:6))
+
+  set_calib_curve(data_dir, "all", "intcal20")
+
+  do_bayesian_inference(data_dir,
+                        "all",
+                        hp,
+                        input_seed=75539,
+                        control=list(num_chains = 4,
+                                     samps_per_chain = 4500,
+                                     warmup = 2000)
+                       )
+}

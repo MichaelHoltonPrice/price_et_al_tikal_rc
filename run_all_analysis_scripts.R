@@ -1,0 +1,7 @@
+source("create_Fig1.R")
+source("create_identif_results_exp.R")
+source("create_identif_results_gm.R")
+source("do_simulations.R")
+source("create_simulation_plots.R")
+source("do_maya_inference.R")
+source("create_maya_plots.R")
