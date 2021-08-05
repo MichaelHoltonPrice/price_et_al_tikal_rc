@@ -22,6 +22,7 @@ install.packages(c("rcarbon", "here", "readr", "gtools", "rlist", "readxl"))
 ```
 
 ## Option 2: Build a Docker image using the baydem Dockerfile
+To force all docker material to be (re)downloaded prior to creating the Docker image -- a step you should be certain you want to take -- use: "docker system prune -a"
 
 ```console
 git clone https://github.com/eehh-stanford/baydem
