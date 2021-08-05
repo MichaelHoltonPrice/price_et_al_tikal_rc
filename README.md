@@ -18,8 +18,8 @@ https://github.com/eehh-stanford/baydem
 Install these additional packages in R:
 
 ```R
-install.packages("rcarbon", "here", "readr", "gtools", 
-                 "rlist", "readxl", "tools")
+install.packages(c("rcarbon", "here", "readr", "gtools", 
+                 "rlist", "readxl", "tools"))
 ```
 
 ## Option 2: Build a Docker image using the baydem Dockerfile
@@ -42,8 +42,8 @@ Clone this github repository and install additional dependencies:
 git clone https://github.com/MichaelHoltonPrice/price_et_al_tikal_rc
 cd price_et_al_tikal_rc
 R
-install.packages("rcarbon", "here", "readr", "gtools", 
-                 "rlist", "readxl", "tools")
+install.packages(c("rcarbon", "here", "readr", "gtools", 
+                 "rlist", "readxl", "tools"))
 ```
 
 # Run the analysis code
