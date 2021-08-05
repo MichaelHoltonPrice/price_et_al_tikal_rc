@@ -199,7 +199,7 @@ hp <-
     alpha_d = 1,
     # The gamma distribution shape parameter for sigma
     alpha_s = 10,
-    # The gamma distribution rate parameter for sigma, yielding a mode of 300
+    # The gamma distribution rate parameter for sigma, yielding a mode of 100
     alpha_r = (10 - 1) / 100,
     # Spacing for the measurement matrix (years)
     dtau = 1
