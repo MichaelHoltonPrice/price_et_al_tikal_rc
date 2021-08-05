@@ -20,6 +20,8 @@ R/.DS_Store
 
 .idea
 
+*~
+
 # Don't track results files (except for OxCal web outputs)
 # Output of make_bayesian_radiocarbon_illustrations.R
 outputs/Fig1_single_date_calibration.pdf
@@ -58,10 +60,10 @@ outputs/Fig2_non_bayesian_fits.pdf
 outputs/Fig3_bayesian_fits.pdf
 
 # Outputs of do_maya_inference.R
-outputs/mesorad_combined.csv
-outputs/mesorad_filtered.csv
+outputs/filtration_log.yaml
+outputs/mesorad_hygiene_counts.csv
 outputs/mesorad_final.csv
+outputs/site_counts.yaml
+outputs/maya_hp.rds
 outputs/tikal.rds
 outputs/all.rds
-
-*~

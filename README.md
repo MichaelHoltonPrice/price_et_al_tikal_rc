@@ -18,8 +18,8 @@ https://github.com/eehh-stanford/baydem
 Install these additional packages in R:
 
 ```R
-install.packages("rcarbon, here, readr, gtools", 
-                 "readxl", "ArchaeoChron", "tools")
+install.packages("rcarbon", "here", "readr", "gtools", 
+                 "rlist", "readxl", "tools")
 ```
 
 ## Option 2: Build a Docker image using the baydem Dockerfile
@@ -42,9 +42,8 @@ Clone this github repository and install additional dependencies:
 git clone https://github.com/MichaelHoltonPrice/price_et_al_tikal_rc
 cd price_et_al_tikal_rc
 R
-
-install.packages("rcarbon, here, readr, gtools", 
-                 "readxl", "ArchaeoChron", "tools")
+install.packages("rcarbon", "here", "readr", "gtools", 
+                 "rlist", "readxl", "tools")
 ```
 
 # Run the analysis code
@@ -158,13 +157,22 @@ This will generate the following files:
 
 ## Create the Maya results
 
-Run the following script in R:
+Run the following script in R to do the Bayesian inference (the plots are created using the ensuing script):
 
 ```R
 source("do_Maya_inference.R")
 ```
 
-TODO: add Maya files
+This will generate the following files:
+-    outputs/filtration_log.yaml
+-    outputs/mesorad_hygiene_counts.csv
+-    outputs/mesorad_final.csv
+-    outputs/site_counts.yaml
+-    outputs/maya_hp.rds
+-    outputs/tikal.rds
+-    outputs/all.rds
+
+TODO: add plotting script once it is finalized
 
 ## If running in a Docker container, copy results files
 If necessary, exit R:
