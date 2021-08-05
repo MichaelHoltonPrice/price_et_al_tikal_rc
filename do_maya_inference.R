@@ -159,12 +159,18 @@ if (!file.exists(mesorad_file)) {
   mesorad <- read.csv(mesorad_file, stringsAsFactors=FALSE, check.names=FALSE)
 }
 
-# Before proceeding, check the mesorad file checksums to ensure reproducibility
+# Before proceeding, check that the sums of the following two columns have not
+# changes: "Conventional 14C age (BP)" and "Error". The checksum for the output
+# .csv file is not necessarily consistent across setups.
 testthat::expect_equal(
-  as.character(tools::md5sum(file.path("outputs", "mesorad_final.csv"))),
-  "b6990ee7158cbeb939a14beaf3e07ae4"
+  sum(z[,"Conventional 14C age (BP)"]),
+  2126606
 )
 
+testthat::expect_equal(
+  sum(z[,"Error"]),
+  58821
+)
 # Create a vector of site counts, sorted by size. Make it a list so it can be
 # easily saved in a yaml file
 site_counts_table <- rev(sort(table(mesorad$Site)))
