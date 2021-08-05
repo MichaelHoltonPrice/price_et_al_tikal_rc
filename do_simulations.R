@@ -134,7 +134,7 @@ sim_spec <- list(model_spec=
                  calib_curve=calib_curve,
                  seed=93004)
 
-sim_file <- "sim10000.rds"
+sim_file <- file.path("outputs","sim10000.rds")
 
 if (!file.exists(sim_file)) {
   sim10000 <- simulate_rc_data(sim_spec)
@@ -158,14 +158,22 @@ yaml::write_yaml(
 # create_simulation_plots.R. The OxCal web inteface cannot successfully run the
 # N=10000 model, but it is written out anyway.
 Nvect <- c(100,1000,10000)
+# Ensure reproducibility using pre-calculated KDE file checksums
+known_checksums <- c("98a9baf001c016ef29e6840ffbefa36d",
+                     "0efc6390fd86a9cef41aeb2dff53b54a",
+                     "325fcc0f96403ed92e02b12d054f06ed")
 for(m_N in 1:length(Nvect)) {
   N <- Nvect[m_N]
-  save_file <- paste0("KDE_input_",N,".txt")
+  save_file <- file.path("outputs",paste0("KDE_input_",N,".txt"))
   if (!file.exists(save_file)) {
     trc_m     <- sim10000$data$rc_meas$trc_m    [1:N]
     sig_trc_m <- sim10000$data$rc_meas$sig_trc_m[1:N]
     write_KDE_Plot_model(trc_m,sig_trc_m,save_file)
   }
+  testthat::expect_equal(
+     as.character(tools::md5sum(save_file)),
+     known_checksums[m_N]
+  )
 }
 
 # ------------------------------------------------------------------------------
@@ -181,7 +189,7 @@ num_cores <- 10
 max_lik_fit_list <- list()
 for(m_N in 1:length(Nvect)) {
   N <- Nvect[m_N]
-  save_file <- paste0("max_lik_fit",N,".rds")
+  save_file <- file.path("outputs",paste0("max_lik_fit",N,".rds"))
   seed <- max_lik_fit_seeds[m_N]
   if (!file.exists(save_file)) {
     phi_m <- sim10000$data$rc_meas$phi_m[1:N]
@@ -217,7 +225,7 @@ bchron_fit_list <- list()
 tau_plot <- seq(tau_min,tau_max,by=dtau)
 for(m_N in 1:length(Nvect)) {
   N <- Nvect[m_N]
-  save_file <- paste0("bchron_fit",N,".rds")
+  save_file <- file.path("outputs",paste0("bchron_fit",N,".rds"))
   seed <- bchron_fit_seeds[m_N]
   if (!file.exists(save_file)) {
     set.seed(bchron_fit_seeds[m_N])
@@ -257,8 +265,8 @@ density_model <- list(type="trunc_gauss_mix",
                       K=2)
 
 # Save hp and density_model to file
-saveRDS(hp, "hp.rds")
-saveRDS(density_model, "density_model.rds")
+saveRDS(hp, file.path("outputs","hp.rds"))
+saveRDS(density_model, file.path("outputs","density_model.rds"))
 
 # Do the inference
 bayesian_soln_list <- list()
@@ -267,7 +275,7 @@ control <- list(samps_per_chain=4500,
                 warmup = 2000)
 for(m_N in 1:length(Nvect)) {
   N <- Nvect[m_N]
-  save_file <- paste0("bayesian_soln",N,".rds")
+  save_file <- file.path("outputs",paste0("bayesian_soln",N,".rds"))
   seed <- stan_seeds[m_N]
   if (!file.exists(save_file)) {
     phi_m <- sim10000$data$rc_meas$phi_m[1:N]
@@ -296,7 +304,7 @@ for(m_N in 1:length(Nvect)) {
 bayesian_summ_list <- list()
 for(m_N in 1:length(Nvect)) {
   N <- Nvect[m_N]
-  save_file <- paste0("bayesian_summ",N,".rds")
+  save_file <- file.path("outputs",paste0("bayesian_summ",N,".rds"))
   if (!file.exists(save_file)) {
     phi_m <- sim10000$data$rc_meas$phi_m[1:N]
     sig_m <- sim10000$data$rc_meas$sig_m[1:N]

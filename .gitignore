@@ -20,13 +20,48 @@ R/.DS_Store
 
 .idea
 
-# Don't track results files
-*.rds
+# Don't track results files (except for OxCal web outputs)
+# Output of make_bayesian_radiocarbon_illustrations.R
+outputs/Fig1_single_date_calibration.pdf
+
+# Outputs of create_identif_results_exp.R
+outputs/SuppB_exp.csv
+outputs/FigS1_exp_example.pdf
+
+# Outputs of create_identif_results_gm.R
+outputs/FigS2_gm_example.pdf
+outputs/create_identif_results_gm_sink.txt
+
+# Outputs of do_simulations.R
+outputs/sim10000.rds
+outputs/sig_trc_summary.yaml
+outputs/KDE_input_100.txt
+outputs/KDE_input_1000.txt
+outputs/KDE_input_10000.txt
+outputs/max_lik_fit100.rds
+outputs/max_lik_fit1000.rds
+outputs/max_lik_fit10000.rds
+outputs/bchron_fit100.rds
+outputs/bchron_fit1000.rds
+outputs/bchron_fit10000.rds
+outputs/hp.rds
+outputs/density_model.rds
+outputs/bayesian_soln100.rds
+outputs/bayesian_soln1000.rds
+outputs/bayesian_soln10000.rds
+outputs/bayesian_summ100.rds
+outputs/bayesian_summ1000.rds
+outputs/bayesian_summ10000.rds
+
+# Outputs of create_simulation_plots.R
+outputs/Fig2_non_bayesian_fits.pdf
+outputs/Fig3_bayesian_fits.pdf
+
+# Outputs of do_maya_inference.R
+outputs/mesorad_combined.csv
+outputs/mesorad_filtered.csv
+outputs/mesorad_final.csv
+outputs/tikal.rds
+outputs/all.rds
+
 *~
-*.pdf
-SuppB_exp.csv
-mesorad_combined.csv
-mesorad_filtered.csv
-mesorad_final.csv
-sig_trc_summary.yaml
-supp_count_data.csv

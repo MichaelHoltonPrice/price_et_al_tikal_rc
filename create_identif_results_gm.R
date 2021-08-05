@@ -8,6 +8,9 @@ library(foreach)
 library(MASS)
 registerDoParallel(detectCores())
 
+# Redirect print outputs to file
+sink(file.path("outputs", "create_identif_results_gm_sink.txt"))
+
 source("bayesian_radiocarbon_functions.R")
 
 set.seed(75372) # from random.org between 1 and 1,000,000
@@ -94,7 +97,7 @@ inv_span_list <- equif_data$inv_span_list
 phi_min_plot <- 0
 phi_max_plot <- 0.08
 col_vector <- mapply(brewer.pal, S, "Set1")
-pdf("FigS2_gm_example.pdf", width = 20, height = 12)
+pdf(file.path("outputs","FigS2_gm_example.pdf"), width = 20, height = 12)
 par(mfrow = c(3, 1))
 
 vis_calib_curve(tau_min,
@@ -227,7 +230,7 @@ if (sum(!identified) > 0) {
     N_P <- MASS::Null(t(P))
     print(paste("The null size of P is", ncol(N_P)))
     if (ncol(N_P) == 0) {
-      stop("Sample is not identified even though the null size of P zero")
+      stop("Sample is not identified even though the null size of P is zero")
     }
   }
 }
@@ -317,3 +320,6 @@ print(paste(as.character(num_loc_f), "parameterizations fail for f"))
 print(paste(as.character(num_loc_phi), "parameterizations fail for phi"))
 print(paste(as.character(num_loc_phi_and_f),
             "parameterizations fail for phi and f"))
+
+# End re-direct of print statements
+sink()

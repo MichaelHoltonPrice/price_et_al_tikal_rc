@@ -42,7 +42,7 @@ load_KDE_Plot_fit <- function(file_name) {
 # ------------------------------------------------------------------------------
 
 # Load the simulation
-sim_file <- "sim10000.rds"
+sim_file <- file.path("outputs","sim10000.rds")
 if (!file.exists(sim_file)) {
   stop("Missing simulation save file")
 }
@@ -54,18 +54,18 @@ calib_curve <- sim10000$sim_spec$calib_curve
 calib_df <- load_calib_curve(calib_curve)
 
 # Load hp and density_model
-if (!file.exists("hp.rds")) {
+if (!file.exists(file.path("outputs","hp.rds"))) {
   stop("hp.rds not found")
 } else {
-  hp <- readRDS("hp.rds")
+  hp <- readRDS(file.path("outputs","hp.rds"))
 }
 dtau <- hp$dtau
 tau_plot <- seq(tau_min,tau_max,by=dtau)
 
-if (!file.exists("density_model.rds")) {
+if (!file.exists(file.path("outputs","density_model.rds"))) {
   stop("density_model.rds not found")
 } else {
-  density_model <- readRDS("density_model.rds")
+  density_model <- readRDS(file.path("outputs","density_model.rds"))
 }
 
 # Load the maximum likelihood fits
@@ -73,7 +73,7 @@ Nvect <- c(100,1000,10000)
 max_lik_fit_list <- list()
 for(m_N in 1:length(Nvect)) {
   N <- Nvect[m_N]
-  save_file <- paste0("max_lik_fit",N,".rds")
+  save_file <- file.path("outputs",paste0("max_lik_fit",N,".rds"))
   if (!file.exists(save_file)) {
     stop(paste0("File not found: ", save_file))
   } else {
@@ -98,7 +98,7 @@ kde_fit_list <- list()
 num_kde_fits <- 2
 for(m_N in 1:num_kde_fits) {
   N <- Nvect[m_N]
-  save_file <- paste0("posterior_from_oxcal_",N,".txt")
+  save_file <- file.path("outputs",paste0("posterior_from_oxcal_",N,".txt"))
   if (!file.exists(save_file)) {
     stop(paste0("File not found: ", save_file))
   } else {
@@ -112,7 +112,7 @@ kde1000 <- kde_fit_list[[2]]
 bayesian_soln_list <- list()
 for(m_N in 1:length(Nvect)) {
   N <- Nvect[m_N]
-  save_file <- paste0("bayesian_soln",N,".rds")
+  save_file <- file.path("outputs",paste0("bayesian_soln",N,".rds"))
   if (!file.exists(save_file)) {
     stop(paste0("File not found: ", save_file))
   } else {
@@ -124,7 +124,7 @@ for(m_N in 1:length(Nvect)) {
 bayesian_summ_list <- list()
 for(m_N in 1:length(Nvect)) {
   N <- Nvect[m_N]
-  save_file <- paste0("bayesian_summ",N,".rds")
+  save_file <- file.path("outputs",paste0("bayesian_summ",N,".rds"))
   if (!file.exists(save_file)) {
     stop(paste0("File not found: ", save_file))
   } else {
@@ -136,7 +136,7 @@ for(m_N in 1:length(Nvect)) {
 bchron_fit_list <- list()
 for(m_N in 1:length(Nvect)) {
   N <- Nvect[m_N]
-  save_file <- paste0("bchron_fit",N,".rds")
+  save_file <- file.path("outputs",paste0("bchron_fit",N,".rds"))
   if (!file.exists(save_file)) {
     stop(paste0("File not found: ", save_file))
   } else {
@@ -177,7 +177,8 @@ f_spdf10000 <- colMeans(M10000)
 # (2) Make Fig2_non_bayesian_fits.pdf
 # ------------------------------------------------------------------------------
 num_plots <- 3
-pdf("Fig2_non_bayesian_fits.pdf",width=5,height=2.5*num_plots)
+pdf(file.path("outputs","Fig2_non_bayesian_fits.pdf"),
+    width=5,height=2.5*num_plots)
 
   par(
     mfrow = c(num_plots, 1),
@@ -283,7 +284,8 @@ dev.off()
 # of N=100, N=1000, and N=10000.
 # ------------------------------------------------------------------------------
 num_plots <- 4
-pdf("Fig3_bayesian_fits.pdf",width=5,height=2.5*num_plots)
+pdf(file.path("outputs","Fig3_bayesian_fits.pdf"),
+    width=5,height=2.5*num_plots)
 
   par(
     mfrow = c(num_plots, 1),
