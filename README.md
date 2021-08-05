@@ -67,7 +67,8 @@ This repository contains the following files (see below for why the first two in
     -   LICENSE.md
     -   README.md
 
-## Rather than running each individual script as described in the remainder of this README, all the scripts can be run with the following command:
+## Run all analysis scripts
+Rather than running each individual script as described in the remainder of this README, all the scripts can be run with the following command:
 ```R
 source("run_all_analysis_scripts.R")
 ```
@@ -189,6 +190,9 @@ source("do_maya_inference.R")
 This will generate the following files:
 -    outputs/FigS3_tikal_waic.pdf
 -    outputs/FigS4_all_waic.pdf
+-    outputs/Fig3_maya_inference.pdf
+-    outputs/Fig4_tikal_prev_expert_comparison.pdf
+-    outputs/Fig5_maya_peak_population_histograms.pdf
 
 ## If running in a Docker container, copy results files
 If necessary, exit R:
