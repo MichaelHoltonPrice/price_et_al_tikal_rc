@@ -163,12 +163,12 @@ if (!file.exists(mesorad_file)) {
 # changes: "Conventional 14C age (BP)" and "Error". The checksum for the output
 # .csv file is not necessarily consistent across setups.
 testthat::expect_equal(
-  sum(z[,"Conventional 14C age (BP)"]),
+  sum(mesorad[,"Conventional 14C age (BP)"]),
   2126606
 )
 
 testthat::expect_equal(
-  sum(z[,"Error"]),
+  sum(mesorad[,"Error"]),
   58821
 )
 # Create a vector of site counts, sorted by size. Make it a list so it can be
