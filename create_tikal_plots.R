@@ -7,32 +7,19 @@ if (!file.exists(tikal_file)) {
 }
 tikal <- readRDS(tikal_file)
 
-all_file <- file.path("outputs","all.rds")
-if (!file.exists(all_file)) {
-  stop("Missing all.rds")
-}
-all <- readRDS(all_file)
-
-### FIGURES S3 and S4: loo plots
-# Plot the All and Tikal reconstructions together using the best result for each
-# (per loo). These are Figures S3 and S4 in the supplement.
+### FIGURES S3: loo plot
+# Plot the loo vs K
 pdf(file.path("outputs","FigS3_tikal_loo.pdf"),width=8,height=6)
   plot(tikal$density_model$K,tikal$loo_vect,xlab="K",ylab="loo",main="Tikal")
 dev.off()
 
-pdf(file.path("outputs","FigS4_all_loo.pdf"),width=8,height=6)
-  plot(all$density_model$K,all$loo_vect,xlab="K",ylab="loo",main="All")
-dev.off()
-
-### FIGURE 2: Maya/Tikal densities
-# Plot the All and Tikal reconstructions together using the best result for each
-# (per loo)
+### FIGURE 2: Tikal densities
+# Plot the Tikal reconstruction using the best Bayesian solution (per loo)
 file_name <- file.path("outputs",paste0("Fig3_maya_inference.pdf"))
 
 # TODO: consider fixing the y tick locations
 pdf(file_name, width = 10, height = 10)
-xat <- seq(-1000, 1800, 200)
-xlab <- xat
+
 
 par(
   mfrow = c(2, 1),
@@ -41,27 +28,23 @@ par(
   oma = c(4, 2, 2, 2),
   mar = c(0, 4, 0, 0)
 )
-# First plot of Figure 2 [All]
-make_blank_density_plot(all$bayesian_summary,
+# First: plot the calibration curve
+vis_calib_curve(
+  tikal$density_model$tau_min,
+  tikal$density_model$tau_max,
+  tikal$calib_df,
   xlab = "",
+  ylab = "Fraction Modern",
   xaxt = "n",
-  xlim = c(-1100, 1900),
-  ylim = c(0, 0.002)
+  invert_col = "gray80"
 )
-plot_summed_density(all$bayesian_summary,
-                    lwd = 3,
-                    add = T,
-                    col = "black")
-plot_50_percent_quantile(all$bayesian_summary,
-                         add = T,
-                         lwd = 3,
-                         col = "red")
-add_shaded_quantiles(all$bayesian_summary,
-                     col = adjustcolor("red", alpha.f = 0.25))
-# Second plot of Figure 2 [Tikal]
+box()
+
+# Second: plot the Tikal reconstruction
 make_blank_density_plot(tikal$bayesian_summary,
   xlab = "",
   xaxt = "n",
+  yaxt = "n",
   xlim = c(-1100, 1900),
   ylim = c(0, 0.004)
 )
@@ -75,7 +58,12 @@ plot_50_percent_quantile(tikal$bayesian_summary,
                          col = "blue")
 add_shaded_quantiles(tikal$bayesian_summary,
                      col = adjustcolor("blue", alpha.f = 0.25))
+xat <- seq(-800, 1600, 200)
+yat <- c(0, .001, .002, .003)
+xlab <- xat
+ylab <- yat
 axis(side = 1, at = xat, labels = xlab)
+axis(side = 2, at = yat, labels = ylab)
 mtext("Year (AD)", side = 1, line = 2.5)
 dev.off()
 
@@ -150,7 +138,6 @@ expert_recons <-
   ))
 
 # Extract the parameter matrices
-TH_all <- extract_param(  all$bayesian_solutions[[  all$m_K_best]]$fit)
 TH_tik <- extract_param(tikal$bayesian_solutions[[tikal$m_K_best]]$fit)
 
 # Because the intervals used by experts differ, restrict the end-to-end
@@ -209,7 +196,7 @@ expert_recons[c(
 
 # Now that preliminaries are out of the way, make the actual plot comparing our
 # reconstruction to previous expert reconstructions
-# TODO: fix cutoff of Bayesian densities
+# TODO: consider extending density curve beyond current, expert ranges
 file_name <- file.path("outputs","Fig4_tikal_prev_expert_comparison.pdf")
 pdf(file_name, width = 6, height = 12)
 par(
@@ -266,60 +253,50 @@ mtext("Year (AD)", side = 1, line = 2.5)
 dev.off()
 
 ### FIGURE 4: Peak Population Histograms
-
-# Generate a histogram plot of the peak population date for both All sites and
-# Tikal. The underlying data for the histograms comes from each Bayesian sample.
+# Generate a histogram plot of the peak population date for the Tikal
+# reconstruction. Each value used to generate the histogram comes from a
+# separate Bayesian sample.
 # Extract the dates of the peak value
-tpeak_all <- unlist(lapply(all$bayesian_summary$summ_list, function(s) {
-  s$t_peak
-}))
-tpeak_tik <- unlist(lapply(tikal$bayesian_summary$summ_list, function(s) {
+tpeak <- unlist(lapply(tikal$bayesian_summary$summ_list, function(s) {
   s$t_peak
 }))
 
-get_hist_breaks <- function(v_all,v_tik,dv) {
-  # For the input All and Tikal data, create histogram breaks with the spacing
-  # dv.
-  vmin <- floor(min(v_all,v_tik)/dv)*dv
-  vmax <- ceiling(max(v_all,v_tik)/dv)*dv
-  vBreaks <- seq(vmin, vmax, by = dv)
-  return(vBreaks)
+get_hist_breaks <- function(v,dv) {
+  # For the input vector v, create histogram breaks with the spacing dv.
+  v_min <- floor(min(v)/dv)*dv
+  v_max <- ceiling(max(v)/dv)*dv
+  v_breaks <- seq(v_min, v_max, by = dv)
+  return(v_breaks)
 }
 
 # To improve interpretability of the histogram (by showing it on a smaller
-# timespan) these samples below AD 600 are placed in a bin at AD 600. There
-# are 76 such observations, most of which correspond to samples for which the
+# timespan) these samples below AD 630 are placed in a bin at AD 630 and the
+# samples above 835 are placed in a bin at 835.
+#
+# TODO: update the following comment and test with the latest analysis data
+# There are 76 such observations, most of which correspond to samples for which the
 # Pre-Classic peak is very sharp.
 #testthat::expect_equal(
-#  sum(tpeak_tik < 600),
+#  sum(tpeak < 600),
 #  76
 #)
 
-# Create a modified vector with the samples below 600 set to 597.5
+# Create a modified vector with the samples below 630 set to 627.5 and those
+# above 835 set to 837.5
 tpeak_cutoff_lo <- 630
 tpeak_cutoff_hi <- 835
-tpeak_tik_modified <- tpeak_tik
-tpeak_tik_modified[tpeak_tik_modified < tpeak_cutoff_lo] <- tpeak_cutoff_lo - 2.5
-tpeak_tik_modified[tpeak_tik_modified > tpeak_cutoff_hi] <- tpeak_cutoff_hi + 2.5
+tpeak_modified <- tpeak
+tpeak_modified[tpeak_modified < tpeak_cutoff_lo] <- tpeak_cutoff_lo - 2.5
+tpeak_modified[tpeak_modified > tpeak_cutoff_hi] <- tpeak_cutoff_hi + 2.5
 
-tpeakBreaks <- get_hist_breaks(tpeak_all,tpeak_tik_modified,5)
-file_name <- file.path("outputs","Fig5_maya_peak_population_histograms.pdf")
+tpeak_breaks <- get_hist_breaks(tpeak_modified,5)
+file_name <- file.path("outputs","Fig5_tikal_peak_population_histogram.pdf")
 
 pdf(file_name, width = 10, height = 6)
-
-hist(tpeak_all,
-     breaks = tpeakBreaks,
-     xlab = "Year (AD) of Peak Population",
-     ylab = "Density",
-     main = NULL,
-     col = rgb(1, 0, 0, .5),
-     freq = F)
-hist(tpeak_tik_modified,
-     breaks = tpeakBreaks,
-     col = rgb(0, 0, 1, .5),
-     add = T,
-     freq = F)
-text(tpeak_cutoff_lo-2.5,0.0075,paste0("< AD ",tpeak_cutoff_lo),srt=90,cex=1)
-text(tpeak_cutoff_hi+2.5,0.0075,paste0("> AD ",tpeak_cutoff_hi),srt=90,cex=1)
-
+  hist(tpeak_modified,
+       breaks = tpeak_breaks,
+       col = rgb(0, 0, 1, .5),
+       freq = F)
+  text(tpeak_cutoff_lo-2.5,0.0075,paste0("< AD ",tpeak_cutoff_lo),srt=90,cex=1)
+  text(tpeak_cutoff_hi+2.5,0.0075,paste0("> AD ",tpeak_cutoff_hi),srt=90,cex=1)
 dev.off()

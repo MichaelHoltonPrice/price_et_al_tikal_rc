@@ -227,27 +227,3 @@ if (!file.exists(tikal_file)) {
                                    warmup = 2000)
                      )
 }
-
-# If necessary, do the Bayesian inference for All observations
-all_file <- file.path(data_dir, "all.rds")
-if (!file.exists(all_file)) {
-  set_rc_meas(data_dir,
-              "all",
-              mesorad)
-
-  set_density_model(data_dir, "all", list(type="trunc_gauss_mix",
-                                          tau_min=-1100,
-                                          tau_max=1900,
-                                          K=2:6))
-
-  set_calib_curve(data_dir, "all", "intcal20")
-
-  do_bayesian_inference(data_dir,
-                        "all",
-                        hp,
-                        input_seed=75539,
-                        control=list(num_chains = 4,
-                                     samps_per_chain = 4500,
-                                     warmup = 2000)
-                       )
-}
