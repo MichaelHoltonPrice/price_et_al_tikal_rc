@@ -188,8 +188,8 @@ source("do_maya_inference.R")
 ```
 
 This will generate the following files:
--    outputs/FigS3_tikal_waic.pdf
--    outputs/FigS4_all_waic.pdf
+-    outputs/FigS3_tikal_loo.pdf
+-    outputs/FigS4_all_loo.pdf
 -    outputs/Fig3_maya_inference.pdf
 -    outputs/Fig4_tikal_prev_expert_comparison.pdf
 -    outputs/Fig5_maya_peak_population_histograms.pdf

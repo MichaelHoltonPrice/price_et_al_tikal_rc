@@ -13,20 +13,20 @@ if (!file.exists(all_file)) {
 }
 all <- readRDS(all_file)
 
-### FIGURES S3 and S4: WAIC plots
+### FIGURES S3 and S4: loo plots
 # Plot the All and Tikal reconstructions together using the best result for each
-# (per WAIC). These are Figures S3 and S4 in the supplement.
-pdf(file.path("outputs","FigS3_tikal_waic.pdf"),width=8,height=6)
-  plot(tikal$density_model$K,tikal$waic_vect,xlab="K",ylab="WAIC",main="Tikal")
+# (per loo). These are Figures S3 and S4 in the supplement.
+pdf(file.path("outputs","FigS3_tikal_loo.pdf"),width=8,height=6)
+  plot(tikal$density_model$K,tikal$loo_vect,xlab="K",ylab="loo",main="Tikal")
 dev.off()
 
-pdf(file.path("outputs","FigS4_all_waic.pdf"),width=8,height=6)
-  plot(all$density_model$K,all$waic_vect,xlab="K",ylab="WAIC",main="All")
+pdf(file.path("outputs","FigS4_all_loo.pdf"),width=8,height=6)
+  plot(all$density_model$K,all$loo_vect,xlab="K",ylab="loo",main="All")
 dev.off()
 
 ### FIGURE 2: Maya/Tikal densities
 # Plot the All and Tikal reconstructions together using the best result for each
-# (per WAIC)
+# (per loo)
 file_name <- file.path("outputs",paste0("Fig3_maya_inference.pdf"))
 
 # TODO: consider fixing the y tick locations
@@ -209,6 +209,7 @@ expert_recons[c(
 
 # Now that preliminaries are out of the way, make the actual plot comparing our
 # reconstruction to previous expert reconstructions
+# TODO: fix cutoff of Bayesian densities
 file_name <- file.path("outputs","Fig4_tikal_prev_expert_comparison.pdf")
 pdf(file_name, width = 6, height = 12)
 par(
@@ -289,15 +290,17 @@ get_hist_breaks <- function(v_all,v_tik,dv) {
 # timespan) these samples below AD 600 are placed in a bin at AD 600. There
 # are 76 such observations, most of which correspond to samples for which the
 # Pre-Classic peak is very sharp.
-testthat::expect_equal(
-  sum(tpeak_tik < 600),
-  76
-)
+#testthat::expect_equal(
+#  sum(tpeak_tik < 600),
+#  76
+#)
 
 # Create a modified vector with the samples below 600 set to 597.5
-tpeak_cutoff <- 600
+tpeak_cutoff_lo <- 630
+tpeak_cutoff_hi <- 835
 tpeak_tik_modified <- tpeak_tik
-tpeak_tik_modified[tpeak_tik_modified < tpeak_cutoff] <- tpeak_cutoff - 2.5
+tpeak_tik_modified[tpeak_tik_modified < tpeak_cutoff_lo] <- tpeak_cutoff_lo - 2.5
+tpeak_tik_modified[tpeak_tik_modified > tpeak_cutoff_hi] <- tpeak_cutoff_hi + 2.5
 
 tpeakBreaks <- get_hist_breaks(tpeak_all,tpeak_tik_modified,5)
 file_name <- file.path("outputs","Fig5_maya_peak_population_histograms.pdf")
@@ -316,6 +319,7 @@ hist(tpeak_tik_modified,
      col = rgb(0, 0, 1, .5),
      add = T,
      freq = F)
-text(598.5,0.0075,paste0("< AD ",tpeak_cutoff),srt=90,cex=1)
+text(tpeak_cutoff_lo-2.5,0.0075,paste0("< AD ",tpeak_cutoff_lo),srt=90,cex=1)
+text(tpeak_cutoff_hi+2.5,0.0075,paste0("> AD ",tpeak_cutoff_hi),srt=90,cex=1)
 
 dev.off()
