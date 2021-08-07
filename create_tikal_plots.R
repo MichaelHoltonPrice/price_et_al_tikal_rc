@@ -17,9 +17,7 @@ dev.off()
 # Plot the Tikal reconstruction using the best Bayesian solution (per loo)
 file_name <- file.path("outputs",paste0("Fig3_maya_inference.pdf"))
 
-# TODO: consider fixing the y tick locations
 pdf(file_name, width = 10, height = 10)
-
 
 par(
   mfrow = c(2, 1),

@@ -59,18 +59,31 @@ outputs/bayesian_summ10000.rds
 outputs/Fig2_non_bayesian_fits.pdf
 outputs/Fig3_bayesian_fits.pdf
 
-# Outputs of do_maya_inference.R
+# Outputs of preprocess_mesorad_dataset.R
 outputs/filtration_log.yaml
 outputs/mesorad_hygiene_counts.csv
 outputs/mesorad_final.csv
 outputs/site_counts.yaml
 outputs/maya_hp.rds
-outputs/tikal.rds
-outputs/all.rds
+
+# Outputs of do_tikal_inference.R
+tikal_inference_inputs.rds
+outputs/tikal_K2.rds
+outputs/tikal_K3.rds
+outputs/tikal_K4.rds
+outputs/tikal_K5.rds
+outputs/tikal_K6.rds
+outputs/tikal_K7.rds
+outputs/tikal_K8.rds
+outputs/tikal_K9.rds
+outputs/tikal_K10.rds
+outputs/tikal_K11.rds
+outputs/tikal_K12.rds
+outputs/tikal_K13.rds
+outputs/tikal_K14.rds
 
 # Outputs of create_maya_plots.R
 outputs/FigS3_tikal_loo.pdf
-outputs/FigS4_all_loo.pdf
-outputs/Fig3_maya_inference.pdf
+outputs/Fig3_tikal_inference.pdf
 outputs/Fig4_tikal_prev_expert_comparison.pdf
-outputs/Fig5_maya_peak_population_histograms.pdf
+outputs/Fig5_tikal_peak_population_histogram.pdf

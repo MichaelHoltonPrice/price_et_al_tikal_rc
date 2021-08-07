@@ -62,7 +62,9 @@ This repository contains the following files (see below for why the first two in
     -   create_identif_results_gm.R
     -   do_simulations.R
     -   create_simulation_plots.R
-    -   do_maya_inference.R
+    -   preprocess_mesorad_dataset.R
+    -   do_tikal_inference.R
+    -   create_tikal_plots.R
 -   License and README files:
     -   LICENSE.md
     -   README.md
@@ -151,8 +153,7 @@ This will generate the following files:
 -    outputs/posterior_from_oxcal_100.txt
 -    outputs/posterior_from_oxcal_1000.txt
 
-We were unable to successfully run the N=10000 KDE model. Oxcal cannot handle that many observations.
-TODO: explain precisely where the posterior data come from in the Oxcal results.
+We were unable to successfully run the N=10000 KDE model. Oxcal cannot handle that many observations. The files posterior_input_from_oxcal_100.txt and posterior_input_from_oxcal_1000.txt were obtained by fitting a KDE_Plot model, loading the model in the Oxcal web interface, choosing "Raw data" in the drop-down menu, and copying the Modelled Data: Posterior column.
 
 (3) Run the following script in R:
 
@@ -164,45 +165,49 @@ This will generate the following files:
 -    outputs/Fig2_non_bayesian_fits.pdf
 -    outputs/Fig3_bayesian_fits.pdf
 
-## Create the Maya results
+## Create the Tikal results
+The Tikal analysis requires running three scripts: preprocess_mesorad_dataset.R, do_tikal_inference.R, create_tikal_plots.R. The first script does necessary preprocessing (e.g., applying hygiene rules). The second script calls baydem::sample_theta to do Bayesian inference for truncated Gaussian mixture models with the number of mixtures ranging from K=2 through K=14. The third script creates the publication plots.
 
-Run the following script in R to do the Bayesian inference (the plots are created using the ensuing script):
-
+Run the following script in R to preprocess the Mesorad data used for the inference in the next step:
 ```R
-source("do_maya_inference.R")
+source("preprocess_mesorad_dataset.R")
 ```
-
 This will generate the following files:
 -    outputs/filtration_log.yaml
 -    outputs/mesorad_hygiene_counts.csv
 -    outputs/mesorad_final.csv
 -    outputs/site_counts.yaml
 -    outputs/maya_hp.rds
--    outputs/tikal.rds
--    outputs/all.rds
 
-Run the following script in R to make publication results:
+Run the following script in R to do the Bayesian inference:
 
 ```R
-source("do_maya_inference.R")
+source("do_tikal_inference.R")
+```
+
+This will create save files for each value of K (the number of mixture components) from 2 through 14, as well as an .rds file with inputs for the inference:
+-    tikal_inference_inputs.rds
+-    outputs/tikal_K2.rds
+-    ...
+-    outputs/tikal_K14.rds
+
+Run the following script in R to create the publication plots:
+
+```R
+source("create_tikal_plots.R")
 ```
 
 This will generate the following files:
 -    outputs/FigS3_tikal_loo.pdf
--    outputs/FigS4_all_loo.pdf
--    outputs/Fig3_maya_inference.pdf
+-    outputs/Fig3_tikal_inference.pdf
 -    outputs/Fig4_tikal_prev_expert_comparison.pdf
--    outputs/Fig5_maya_peak_population_histograms.pdf
+-    outputs/Fig5_tikal_peak_population_histogram.pdf
 
-## If running in a Docker container, copy results files
-If necessary, exit R:
+## If running in a Docker container, copy results to /data
+Run the following script in R to copy the results, plus some additional files (the source code and inputs data files). This script is not included in run_all_analysis_scripts.R).
+
 ```R
-q()
-y
-```
+source("create_final_snapshot.R")
+``` 
 
-Copy the outputs folder to the mirrored /data directory
-
-```console
-cp outputs /data
-```
+This will populate the folder /data/final_files with the results, source code, and input data files. We have archived this folder in tDAR (the Digital Archaeological Record) with our final publication results.

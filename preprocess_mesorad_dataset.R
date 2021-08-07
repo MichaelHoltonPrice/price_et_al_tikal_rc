@@ -172,19 +172,6 @@ if (!file.exists(mesorad_file)) {
   mesorad <- read.csv(mesorad_file, stringsAsFactors=FALSE, check.names=FALSE)
 }
 
-# Check that the sums of the following two columns have not changes:
-# "Conventional 14C age (BP)" and "Error" (processing should be deterministic
-# since a random number seed is used).
-testthat::expect_equal(
-  sum(mesorad[,"Conventional 14C age (BP)"]),
-  2126606
-)
-
-testthat::expect_equal(
-  sum(mesorad[,"Error"]),
-  58821
-)
-
 # Create a vector of site counts, sorted by size. Make it a list so it can be
 # easily saved in a yaml file
 site_counts_table <- rev(sort(table(mesorad$Site)))
