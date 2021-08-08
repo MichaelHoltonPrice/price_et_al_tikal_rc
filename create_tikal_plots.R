@@ -51,7 +51,7 @@ bayesian_summ <- summarize_bayesian_inference(bayesian_soln,rc_meas,density_mode
 
 ### FIGURE 2: Tikal densities
 # Plot the Tikal reconstruction using the best Bayesian solution (per loo)
-file_name <- file.path("outputs",paste0("Fig3_maya_inference.pdf"))
+file_name <- file.path("outputs",paste0("Fig4_maya_inference.pdf"))
 
 pdf(file_name, width = 10, height = 10)
 
@@ -231,7 +231,7 @@ expert_recons[c(
 # Now that preliminaries are out of the way, make the actual plot comparing our
 # reconstruction to previous expert reconstructions
 # TODO: consider extending density curve beyond current, expert ranges
-file_name <- file.path("outputs","Fig4_tikal_prev_expert_comparison.pdf")
+file_name <- file.path("outputs","Fig5_tikal_prev_expert_comparison.pdf")
 pdf(file_name, width = 6, height = 12)
 par(
   mfrow = c(5, 1),
@@ -324,7 +324,7 @@ tpeak_modified[tpeak_modified < tpeak_cutoff_lo] <- tpeak_cutoff_lo - 2.5
 tpeak_modified[tpeak_modified > tpeak_cutoff_hi] <- tpeak_cutoff_hi + 2.5
 
 tpeak_breaks <- get_hist_breaks(tpeak_modified,5)
-file_name <- file.path("outputs","Fig5_tikal_peak_population_histogram.pdf")
+file_name <- file.path("outputs","Fig6_tikal_peak_population_histogram.pdf")
 
 pdf(file_name, width = 10, height = 6)
   hist(tpeak_modified,
