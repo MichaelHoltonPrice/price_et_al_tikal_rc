@@ -1,17 +1,53 @@
 library(baydem)
 rm(list = ls())
 
-tikal_file <- file.path("outputs","tikal.rds")
-if (!file.exists(tikal_file)) {
-  stop("Missing tikal.rds")
+# Read Tikal inference inputs
+tikal_inputs_file <- file.path("outputs","tikal_inference_inputs.rds")
+if (!file.exists(tikal_inputs_file)) {
+  stop("outputs/tikal_inference_inputs.rds not found")
 }
-tikal <- readRDS(tikal_file)
+
+tikal_inputs <- readRDS(tikal_inputs_file)
+# For code clarity, extract variables in tikal_inputs
+Kvect          <- tikal_inputs$Kvect
+density_model0 <- tikal_inputs$density_model0
+rc_meas        <- tikal_inputs$rc_meas
+hp             <- tikal_inputs$hp
+calib_df       <- tikal_inputs$calib_df
+init_seed_vect <- tikal_inputs$init_seed_vect
+stan_seed_vect <- tikal_inputs$stan_seed_vect
+
+# Create a vector of loo values
+loo_vect <- rep(NA,length(Kvect))
+for (m_K in 1:length(Kvect)) {
+  K <- Kvect[m_K]
+  save_file <- file.path("outputs", paste0("tikal_K",K,".rds"))
+  if(!file.exists(save_file)) {
+    stop(paste0("Missing save file for K=",K))
+  }
+  bayesian_soln <- readRDS(save_file)
+  loo_vect[m_K] <- bayesian_soln$loo
+}
 
 ### FIGURES S3: loo plot
 # Plot the loo vs K
 pdf(file.path("outputs","FigS3_tikal_loo.pdf"),width=8,height=6)
-  plot(tikal$density_model$K,tikal$loo_vect,xlab="K",ylab="loo",main="Tikal")
+  plot(Kvect,loo_vect,xlab="K",ylab="loo")
 dev.off()
+
+# Identify the best model and write a summary of the loo
+m_K_best <- which.max(loo_vect)
+K_best <- Kvect[m_K_best]
+loo_summary <- list(m_K_best=m_K_best,K_best=K_best,loo_vect=loo_vect)
+yaml::write_yaml(loo_summary, file.path("outputs","loo_summary.yaml"))
+
+# Do the Baysian summary for the best model
+density_model <- density_model0
+density_model$K <- K_best
+save_file <- file.path("outputs", paste0("tikal_K",K_best,".rds"))
+bayesian_soln <- readRDS(save_file)
+bayesian_soln <- bayesian_soln$bayesian_solution
+bayesian_summ <- summarize_bayesian_inference(bayesian_soln,rc_meas,density_model,calib_df,hp$dtau)
 
 ### FIGURE 2: Tikal densities
 # Plot the Tikal reconstruction using the best Bayesian solution (per loo)
@@ -28,9 +64,9 @@ par(
 )
 # First: plot the calibration curve
 vis_calib_curve(
-  tikal$density_model$tau_min,
-  tikal$density_model$tau_max,
-  tikal$calib_df,
+  density_model$tau_min,
+  density_model$tau_max,
+  calib_df,
   xlab = "",
   ylab = "Fraction Modern",
   xaxt = "n",
@@ -39,22 +75,22 @@ vis_calib_curve(
 box()
 
 # Second: plot the Tikal reconstruction
-make_blank_density_plot(tikal$bayesian_summary,
+make_blank_density_plot(bayesian_summ,
   xlab = "",
   xaxt = "n",
   yaxt = "n",
   xlim = c(-1100, 1900),
   ylim = c(0, 0.004)
 )
-plot_summed_density(tikal$bayesian_summary,
+plot_summed_density(bayesian_summ,
                     lwd = 3,
                     add = T,
                     col = "black")
-plot_50_percent_quantile(tikal$bayesian_summary,
+plot_50_percent_quantile(bayesian_summ,
                          add = T,
                          lwd = 3,
                          col = "blue")
-add_shaded_quantiles(tikal$bayesian_summary,
+add_shaded_quantiles(bayesian_summ,
                      col = adjustcolor("blue", alpha.f = 0.25))
 xat <- seq(-800, 1600, 200)
 yat <- c(0, .001, .002, .003)
@@ -136,7 +172,7 @@ expert_recons <-
   ))
 
 # Extract the parameter matrices
-TH_tik <- extract_param(tikal$bayesian_solutions[[tikal$m_K_best]]$fit)
+TH <- extract_param(bayesian_soln$fit)
 
 # Because the intervals used by experts differ, restrict the end-to-end
 # Bayesian reconstruction to each expert interval seperately and normalize
@@ -149,7 +185,7 @@ expert_recons[c(
   purrr::map(function(x) {
     dens <- calc_interval_densities(x)
     tau <- seq(min(dens[, 1]), max(dens[, 2]), by = 1)
-    fMat <- calc_gauss_mix_pdf_mat(TH_tik,
+    fMat <- calc_gauss_mix_pdf_mat(TH,
       tau,
       tau_min = min(tau),
       tau_max = max(tau)
@@ -174,7 +210,7 @@ expert_recons[c(
   purrr::map(function(x) {
     dens <- calc_point_densities(x)
     tau <- seq(min(dens[, 1]), max(dens[, 1]), by = 1)
-    fMat <- calc_gauss_mix_pdf_mat(TH_tik,
+    fMat <- calc_gauss_mix_pdf_mat(TH,
       tau,
       tau_min = min(tau),
       tau_max = max(tau)
@@ -255,7 +291,7 @@ dev.off()
 # reconstruction. Each value used to generate the histogram comes from a
 # separate Bayesian sample.
 # Extract the dates of the peak value
-tpeak <- unlist(lapply(tikal$bayesian_summary$summ_list, function(s) {
+tpeak <- unlist(lapply(bayesian_summ$summ_list, function(s) {
   s$t_peak
 }))
 

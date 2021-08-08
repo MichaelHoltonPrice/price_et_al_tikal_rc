@@ -7,12 +7,11 @@ if (dir.exists(snapshot_dir)) {
 
 # Create the snapshot directory
 dir.create(snapshot_dir)
+results_dir <- file.path(snapshot_dir,"results")
+dir.create(results_dir)
 
 # Copy the results folder
-copyDirectory("outputs", snapshot_dir)
-
-# Copy the results folder
-copyDirectory("outputs", snapshot_dir)
+R.utils::copyDirectory("outputs", results_dir)
 
 # Copy the source code and input data files
 files_to_copy <- c("MesoRAD-v.1.2_no_locations.xlsx",
@@ -25,5 +24,7 @@ files_to_copy <- c("MesoRAD-v.1.2_no_locations.xlsx",
                    "create_simulation_plots.R",
                    "preprocess_mesorad_dataset.R",
                    "do_tikal_inference.R",
-                   "create_tikal_plots.R")
-file.copy(file_to_copy,snapshot_dir)
+                   "create_tikal_plots.R",
+				   "run_all_analysis_scripts.R",
+				   "create_final_snapshot.R")
+file.copy(files_to_copy,snapshot_dir)

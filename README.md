@@ -18,7 +18,8 @@ https://github.com/eehh-stanford/baydem
 Install these additional packages in R:
 
 ```R
-install.packages(c("rcarbon", "here", "readr", "gtools", "rlist", "readxl"))
+install.packages(c("rcarbon", "here", "readr", "gtools", 
+                   "rlist", "readxl", "R.utils"))
 ```
 
 ## Option 2: Build a Docker image using the baydem Dockerfile
@@ -42,7 +43,8 @@ Clone this github repository and install additional dependencies:
 git clone https://github.com/MichaelHoltonPrice/price_et_al_tikal_rc
 cd price_et_al_tikal_rc
 R
-install.packages(c("rcarbon", "here", "readr", "gtools", "rlist", "readxl"))
+install.packages(c("rcarbon", "here", "readr", "gtools", 
+                   "rlist", "readxl", "R.utils"))
 ```
 
 # Run the analysis code
@@ -145,8 +147,6 @@ This will generate the following files:
 -    outputs/bayesian_summ100.rds
 -    outputs/bayesian_summ1000.rds
 -    outputs/bayesian_summ10000.rds
--    outputs/tikal.rds
--    outputs/all.rds
 
 (2) Use the Oxcal web interface to create the following to files using the models in KDE_input_100.txt and KDE_input_1000.txt:
 
