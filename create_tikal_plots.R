@@ -331,7 +331,8 @@ pdf(file_name, width = 10, height = 6)
        breaks = tpeak_breaks,
        col = rgb(0, 0, 1, .5),
        freq = F,
-       main=NULL)
+       main=NULL,
+       xlab="Calendar Date [AD]")
   text(tpeak_cutoff_lo-2.5,0.0075,paste0("< AD ",tpeak_cutoff_lo),srt=90,cex=1)
   text(tpeak_cutoff_hi+2.5,0.0075,paste0("> AD ",tpeak_cutoff_hi),srt=90,cex=1)
 dev.off()
