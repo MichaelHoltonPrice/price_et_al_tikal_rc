@@ -199,7 +199,7 @@ source("create_tikal_plots.R")
 
 This will generate the following files:
 -    outputs/FigS3_tikal_loo.pdf
--    outputs/Fig3_tikal_inference.pdf
+-    outputs/Fig4_tikal_inference.pdf
 -    outputs/Fig5_tikal_prev_expert_comparison.pdf
 -    outputs/Fig6_tikal_peak_population_histogram.pdf
 

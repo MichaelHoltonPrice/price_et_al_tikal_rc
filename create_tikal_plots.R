@@ -51,7 +51,7 @@ bayesian_summ <- summarize_bayesian_inference(bayesian_soln,rc_meas,density_mode
 
 ### FIGURE 2: Tikal densities
 # Plot the Tikal reconstruction using the best Bayesian solution (per loo)
-file_name <- file.path("outputs",paste0("Fig4_maya_inference.pdf"))
+file_name <- file.path("outputs",paste0("Fig4_tikal_inference.pdf"))
 
 pdf(file_name, width = 10, height = 10)
 
