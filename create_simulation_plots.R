@@ -435,7 +435,7 @@ pdf(file.path("outputs","Fig3_bayesian_fits.pdf"),
   )
 
   text(
-    labels = "N = 1000",
+    labels = "N = 10000",
     x = 600,
     y = 0.009,
     pos = 4,
