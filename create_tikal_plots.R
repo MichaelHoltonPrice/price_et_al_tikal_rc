@@ -29,7 +29,7 @@ for (m_K in 1:length(Kvect)) {
   loo_vect[m_K] <- bayesian_soln$loo
 }
 
-### FIGURES S3: loo plot
+### FIGURE S3: loo plot
 # Plot the loo vs K
 pdf(file.path("outputs","FigS3_tikal_loo.pdf"),width=8,height=6)
   plot(Kvect,loo_vect,xlab="K",ylab="loo")
@@ -49,7 +49,7 @@ bayesian_soln <- readRDS(save_file)
 bayesian_soln <- bayesian_soln$bayesian_solution
 bayesian_summ <- summarize_bayesian_inference(bayesian_soln,rc_meas,density_model,calib_df,hp$dtau)
 
-### FIGURE 2: Tikal densities
+### FIGURE 4: Tikal densities
 # Plot the Tikal reconstruction using the best Bayesian solution (per loo)
 file_name <- file.path("outputs",paste0("Fig4_tikal_inference.pdf"))
 
@@ -101,64 +101,166 @@ axis(side = 2, at = yat, labels = ylab)
 mtext("Year (AD)", side = 1, line = 2.5)
 dev.off()
 
-### FIGURE 3: Tikal Expert Comparison
-
-calc_interval_densities <- function(dat) {
-  # dat is matrix-like read in with read_excel
-  # return value is a matrix with three columns:
+### FIGURE 5: Tikal Expert Comparison
+calc_interval_densities <- function(recon, tau0, Qdens) {
+  # recon (for reconstruction) is a matrix-like object read in with read_excel
+  # This function normalizes the reconstruction to integrate to 1 on the
+  # interval over which it is defined, and creates a second curve that is the
+  # 50% quantile in the regions where the interval density is not defined (
+  # normalized appropriately).
   #
-  # lower calendar date for the interval
-  # upper calendar date for the interval
-  # normalized density
-  tau <- as.numeric(unlist(dat[, 1]))
-  f <- as.numeric(unlist(dat[, 2]))
-  numInt <- length(tau) / 2 # number of intervals
-  flo <- f[2 * (1:numInt) - 1]
-  fhi <- f[2 * (1:numInt)]
+  # Qdens is a matrix of quantiles at the calendar dates in tau0
+
+  tau <- as.numeric(unlist(recon[, 1]))
+  f   <- as.numeric(unlist(recon[, 2]))
+  num_int <- length(tau) / 2 # number of intervals
+  flo <- f[2 * (1:num_int) - 1]
+  fhi <- f[2 * (1:num_int)]
   if (!all(flo == fhi)) {
     stop("f values are not consistent")
   }
-  if (!all(diff(tau)[seq(2, (numInt * 2 - 2), by = 2)] == 0)) {
+  if (!all(diff(tau)[seq(2, (num_int * 2 - 2), by = 2)] == 0)) {
     stop("tau values are not consistent")
   }
   # Interval durations
-  taulo <- tau[seq(1, 2 * numInt, by = 2)]
-  tauhi <- tau[seq(2, 2 * numInt, by = 2)]
-  intDur <- tauhi - taulo
-  return(cbind(taulo, tauhi, flo / sum(flo * intDur)))
+  tau_lo <- tau[seq(1, 2 * num_int, by = 2)]
+  tau_hi <- tau[seq(2, 2 * num_int, by = 2)]
+  int_dur <- tau_hi - tau_lo # interval durations
+
+  # Calculate the normalized density for the expert reconstruction
+  f_expert <- flo / sum(flo * int_dur)
+
+  # Create the normalized quantile curve on three intervals:
+  # For the plotting, subset the quantile curve into three intervals:
+  # (a) to the left     of the expert reconstruction
+  # (b) On the interval of the expert reconstruction
+  # (c) to the right of    the expert reconstruction
+  ind_left   <- which(tau0 <= min(tau))
+  ind_middle <- which( (tau0 >= min(tau)) & (max(tau) >= tau0) )
+  ind_right  <- which(max(tau) <= tau0)
+
+  # Normalize the quantiles such that the 50% quantile integrates to 1 on the
+  # middle interval.
+  q50  <- Qdens[2,]
+  dtau0 <- tau0[2] - tau0[1] # assume tau0 is evenly spaced
+  norm_factor <- sum(q50[ind_middle]) * dtau0
+  Qdens <- Qdens / norm_factor
+
+  f_max <- max(f_expert, Qdens)
+
+  # Calculate the normalized density in the
+  return(list(tau_lo=tau_lo,
+              tau_hi=tau_hi,
+              f_expert=f_expert,
+              tau0=tau0,
+              ind_left=ind_left,
+              ind_middle=ind_middle,
+              ind_right=ind_right,
+              Qdens=Qdens,
+              f_max=f_max))
 }
 
-add_interval_density_to_plot <- function(dat, ...) {
-  if (ncol(dat) == 2) {
-    lines(dat[, 1], dat[, 2], col = "black", lwd = 3)
-  } else {
-    for (i in 1:nrow(dat)) {
-      if (i == 1) {
-        lines(c(dat[i, 1], dat[i, 1]), c(0, dat[i, 3]), lwd = 3, ...)
-      } else {
-        lines(c(dat[i, 1], dat[i, 1]), c(dat[i - 1, 3], dat[i, 3]), lwd = 3, ...)
-      }
-      lines(c(dat[i, 1], dat[i, 2]), c(dat[i, 3], dat[i, 3]), lwd = 3, ...)
-      if (i == nrow(dat)) {
-        lines(c(dat[i, 2], dat[i, 2]), c(dat[i, 3], 0), lwd = 3, ...)
-      }
+add_interval_density_to_plot <- function(ido) {
+  # ido stands for interval_density_object
+  tau_lo <- ido$tau_lo
+  tau_hi <- ido$tau_hi
+  f      <- ido$f_expert
+  for (i in 1:length(f)) {
+    if (i == 1) {
+      # For the first entry, plot an initial vertical line from 0
+      lines(c(tau_lo[1], tau_lo[1]), c(0, f[1]), lwd=3, col="red")
+    } else {
+      # For other entries, plot a "regular" initial vertical line
+      lines(c(tau_lo[i], tau_lo[i]), c(f[i - 1], f[i]), lwd=3, col="red")
+    }
+    # For all entries, plot a horizontal line
+    lines(c(tau_lo[i], tau_hi[i]), c(f[i], f[i]), lwd=3, col="red")
+
+    # For the final entry, plot a vertical line ending at 0
+    if (i == length(f)) {
+      lines(c(tau_hi[i], tau_hi[i]), c(f[i], 0), lwd=3, col="red")
     }
   }
 }
 
-calc_point_densities <- function(dat) {
-  # dat is matrix-like read in with read_excel
-  # return value is a matrix with the two columns:
+add_quantiles_to_plot <- function(do) {
+  # do stands for density_object (either for an interval or point density).
   #
-  # calendar date
-  # normalized density
-  tau <- as.numeric(unlist(dat[, 1]))
-  f <- as.numeric(unlist(dat[, 2]))
-  weightVect <- calc_trapez_weights(tau)
-  f <- f / sum(f * weightVect)
-  return(cbind(tau, f))
+  # Add the shaded quantiles for the middle region
+  tau_middle <- do$tau0[do$ind_middle]
+  qlo <- do$Qdens[1,do$ind_middle]
+  qhi <- do$Qdens[3,do$ind_middle]
+  graphics::polygon(c(tau_middle, rev(tau_middle)),
+                    c(qlo, rev(qhi)),
+                    border = NA,
+                    xlab = NULL,
+                    col = adjustcolor("blue", alpha.f = 0.25))
+
+  # If necessary, add the left 50% quantile
+  if (length(do$ind_left) > 0) {
+    tau_left <- do$tau0[do$ind_left]
+    q50_left <- do$Qdens[2,do$ind_left]
+    lines(tau_left,q50_left,lwd=3,col="blue")
+  }
+  # Add the middle 50% quantile
+  q50_middle <- do$Qdens[2,do$ind_middle]
+  lines(tau_middle,q50_middle,lwd=3,col="blue")
+
+  # If necessary, add the right 50% quantile
+  if (length(do$ind_right) > 0) {
+    tau_right <- do$tau0[do$ind_right]
+    q50_right <- do$Qdens[2,do$ind_right]
+    lines(tau_right,q50_right,lwd=3,col="blue")
+  }
 }
 
+calc_point_densities <- function(recon, tau0, Qdens) {
+  # recon (for reconstruction) is a matrix-like object read in with read_excel
+  # This function normalizes the reconstruction to integrate to 1 on the
+  # interval over which it is defined, and creates a second curve that is the
+  # 50% quantile in the regions where the point density is not defined (
+  # normalized appropriately).
+  #
+  # Qdens is a matrix of quantiles at the calendar dates in tau0
+
+
+  tau <- as.numeric(unlist(recon[, 1]))
+  f   <- as.numeric(unlist(recon[, 2]))
+
+  weight_vect <- calc_trapez_weights(tau)
+  f_expert <- f / sum(f * weight_vect)
+
+  # Create the normalized quantile curve on three intervals:
+  # For the plotting, subset the quantile curve into three intervals:
+  # (a) to the left     of the expert reconstruction
+  # (b) On the interval of the expert reconstruction
+  # (c) to the right of    the expert reconstruction
+  ind_left   <- which(tau0 <= min(tau))
+  ind_middle <- which( (tau0 >= min(tau)) & (max(tau) >= tau0) )
+  ind_right  <- which(max(tau) <= tau0)
+
+  # Normalize the quantiles such that the 50% quantile integrates to 1 on the
+  # middle interval.
+  q50  <- Qdens[2,]
+  dtau0 <- tau0[2] - tau0[1] # assume tau0 is evenly spaced
+  norm_factor <- sum(q50[ind_middle]) * dtau0
+  Qdens <- Qdens / norm_factor
+
+  f_max <- max(f_expert, Qdens)
+
+  # Calculate the normalized density in the
+  return(list(tau=tau,
+              f_expert=f_expert,
+              tau0=tau0,
+              ind_left=ind_left,
+              ind_middle=ind_middle,
+              ind_right=ind_right,
+              Qdens=Qdens,
+              f_max=f_max))
+}
+
+# Load the repert reconstructions. The result is a named list of tibbles for
+# each expert reconstruction.
 expert_recons <-
   c(
     "Haviland" = "Haviland2003",
@@ -171,122 +273,101 @@ expert_recons <-
     sheet = .x
   ))
 
-# Extract the parameter matrices
-TH <- extract_param(bayesian_soln$fit)
+# Extract the baseline calendar dates and 50% quantile
+tau0 <- bayesian_summ$tau
+q50  <- bayesian_summ$Qdens[2,]
 
-# Because the intervals used by experts differ, restrict the end-to-end
-# Bayesian reconstruction to each expert interval seperately and normalize
-# appropriately
-expert_recons[c(
-  "Haviland",
-  "Turner",
-  "Culbert"
-)] %<>%
-  purrr::map(function(x) {
-    dens <- calc_interval_densities(x)
-    tau <- seq(min(dens[, 1]), max(dens[, 2]), by = 1)
-    fMat <- calc_gauss_mix_pdf_mat(TH,
-      tau,
-      tau_min = min(tau),
-      tau_max = max(tau)
-    )
-    # Make the summary object explicitly to get the right integration limits
-    summ <- list(tau = tau, probs = c(.025, .5, .975))
-    summ$Qdens <- calc_quantiles(fMat, probs = summ$probs)
+# The various expert reconstructions are defined on different intervals. In
+# addition, some provide interval estimates (Haviland, Turner, and Culbert) while
+# others provide point estimates (Fry and Stanley). Normalize the various
+# curves appropriately, accounting for the difference between interval and
+# point estimates. Also, calculate the normalized 50% quantile density on
+# three intervals: to the left, middle, and right of the expert recontructions.
+# Normalize these quantile curves to integrate to one on the middle interval.
+interval_experts <- c("Haviland", "Turner", "Culbert")
+interval_densities <- list()
+for(n in 1:length(interval_experts)) {
+  expert <- interval_experts[n]
+  interval_densities[[n]] <- calc_interval_densities(expert_recons[[expert]],
+                                                    tau0, bayesian_summ$Qdens)
+}
 
-    tibble::lst(
-      data = x,
-      dens,
-      tau,
-      fMat,
-      summ
-    )
-  })
-
-expert_recons[c(
-  "Fry",
-  "Santley"
-)] %<>%
-  purrr::map(function(x) {
-    dens <- calc_point_densities(x)
-    tau <- seq(min(dens[, 1]), max(dens[, 1]), by = 1)
-    fMat <- calc_gauss_mix_pdf_mat(TH,
-      tau,
-      tau_min = min(tau),
-      tau_max = max(tau)
-    )
-    # Make the summary object explicitly to get the right integration limits
-    summ <- list(tau = tau, probs = c(.025, .5, .975))
-    summ$Qdens <- calc_quantiles(fMat, probs = summ$probs)
-
-    tibble::lst(
-      data = x,
-      dens,
-      tau,
-      fMat,
-      summ
-    )
-  })
+point_experts <- c("Fry", "Santley")
+point_densities <- list()
+for(n in 1:length(point_experts)) {
+  expert <- point_experts[n]
+  point_densities[[n]] <- calc_point_densities(expert_recons[[expert]],
+                                               tau0, bayesian_summ$Qdens)
+}
 
 # Now that preliminaries are out of the way, make the actual plot comparing our
 # reconstruction to previous expert reconstructions
-# TODO: consider extending density curve beyond current, expert ranges
 file_name <- file.path("outputs","Fig5_tikal_prev_expert_comparison.pdf")
-pdf(file_name, width = 6, height = 12)
-par(
-  mfrow = c(5, 1),
-  xaxs = "i", # No padding for x-axis
-  yaxs = "i", # No padding for y-axis
-  oma = c(4, 2, 2, 2),
-  mar = c(0, 4, 0, 0)
-)
-
 # Set ranges for plotting
-fMax <- expert_recons %>%
-  purrr::map_dbl(function(x) {
-    max(x$summ$Qdens)
-  }) %>%
-  max()
-tauRange <- expert_recons %>%
-  purrr::map(function(x) {
-    x$tau
-  }) %>%
-  unlist() %>%
-  range()
+f_max <- max(
+  unlist(lapply(interval_densities,function(ido){ido$f_max})),
+  unlist(lapply(   point_densities,function(pdo){pdo$f_max}))
+)
 
 # Set locations of tick marks
 tauticks <- seq(-750, 1250, 250)
 taulabs <- tauticks
-taulabs[taulabs == 0] <- "-1/1"
 fticks <- seq(0, 3.75, by = .5) / 1000
 
-expert_recons %>%
-  purrr::iwalk(function(x, i) {
+pdf(file_name, width = 6, height = 12)
+  par(
+    mfrow = c(5, 1),
+    xaxs = "i", # No padding for x-axis
+    yaxs = "i", # No padding for y-axis
+    oma = c(4, 2, 2, 2),
+    mar = c(0, 4, 0, 0)
+  )
+
+  for (n in 1:length(interval_densities)) {
     plot(NULL,
-      xlim = tauRange,
-      ylim = c(0, fMax),
+      xlim = range(tau0),
+      ylim = c(0, f_max),
       xaxt = "n",
       yaxt = "n",
-      ylab = "Density x 1000"
+      ylab = "Density"
     )
+    add_quantiles_to_plot(interval_densities[[n]])
+    add_interval_density_to_plot(interval_densities[[n]])
     text(
       x = -500,
       y = 0.0025,
-      labels = i,
+      labels = interval_experts[n],
       cex = 2,
       adj = 0
     )
     axis(side = 1, at = tauticks, labels = taulabs)
     axis(side = 2, at = fticks, labels = fticks * 1000)
-    add_interval_density_to_plot(x$dens, col = "black")
-    plot_50_percent_quantile(x$summ, add = T, lwd = 3, col = "blue")
-    add_shaded_quantiles(x$summ, col = adjustcolor("blue", alpha.f = 0.25))
-  })
+  }
 
-mtext("Year (AD)", side = 1, line = 2.5)
+  for (n in 1:length(point_densities)) {
+    plot(NULL,
+      xlim = range(tau0),
+      ylim = c(0, f_max),
+      xaxt = "n",
+      yaxt = "n",
+      ylab = "Density"
+    )
+    add_quantiles_to_plot(point_densities[[n]])
+    lines(point_densities[[n]]$tau,point_densities[[n]]$f_expert, lwd=3,col="red")
+    text(
+      x = -500,
+      y = 0.0025,
+      labels = point_experts[n],
+      cex = 2,
+      adj = 0
+    )
+    axis(side = 1, at = tauticks, labels = taulabs)
+    axis(side = 2, at = fticks, labels = fticks * 1000)
+  }
+  mtext("Year (AD)", side = 1, line = 2.5)
 dev.off()
 
-### FIGURE 4: Peak Population Histograms
+### FIGURE 6: Peak Population Histograms
 # Generate a histogram plot of the peak population date for the Tikal
 # reconstruction. Each value used to generate the histogram comes from a
 # separate Bayesian sample.
@@ -304,24 +385,51 @@ get_hist_breaks <- function(v,dv) {
 }
 
 # To improve interpretability of the histogram (by showing it on a smaller
-# timespan) these samples below AD 630 are placed in a bin at AD 630 and the
-# samples above 835 are placed in a bin at 835.
-#
-# TODO: update the following comment and test with the latest analysis data
-# There are 76 such observations, most of which correspond to samples for which the
-# Pre-Classic peak is very sharp.
-#testthat::expect_equal(
-#  sum(tpeak < 600),
-#  76
-#)
+# timespan) samples below AD 600 are placed in a bin at AD 600 and the samples
+# above 810 are placed in a bin at 810. The samples below AD 600 range from
+# -84 to 38 and those above 810 (there are two) are 1279 and 1318. These
+# occur when the side peaks are especially narrow and the main peak is
+# especially wide.
 
-# Create a modified vector with the samples below 630 set to 627.5 and those
-# above 835 set to 837.5
-tpeak_cutoff_lo <- 630
-tpeak_cutoff_hi <- 835
+#Create a modified vector with the samples below 600 set to 597.5 and those
+# above 810 set to 812.5. Check the counts for these bins.
+tpeak_cutoff_lo <- 600
+tpeak_cutoff_hi <- 810
+
+ind_lo <- tpeak < tpeak_cutoff_lo
+ind_hi <- tpeak > tpeak_cutoff_hi
+
+num_lo <- sum(ind_lo)
+num_hi <- sum(ind_hi)
+
+range_lo <- range(tpeak[ind_lo])
+range_hi <- range(tpeak[ind_hi])
+
+testthat::expect_equal(
+  num_lo,
+  32
+)
+testthat::expect_equal(
+  num_hi,
+  2
+)
+
 tpeak_modified <- tpeak
 tpeak_modified[tpeak_modified < tpeak_cutoff_lo] <- tpeak_cutoff_lo - 2.5
 tpeak_modified[tpeak_modified > tpeak_cutoff_hi] <- tpeak_cutoff_hi + 2.5
+
+# Write peak information to file
+tpeak_summary <- list(tpeak_cutoff_lo=tpeak_cutoff_lo,
+                      tpeak_cutoff_hi=tpeak_cutoff_hi,
+                      tpeak=tpeak,
+                      tpeak_modified=tpeak_modified,
+                      num_lo=num_lo,
+                      num_hi=num_hi,
+                      range_lo=range_lo,
+                      range_hi=range_hi)
+
+yaml::write_yaml(tpeak_summary, file.path("outputs","tpeak_summary.yaml"))
+
 
 tpeak_breaks <- get_hist_breaks(tpeak_modified,5)
 file_name <- file.path("outputs","Fig6_tikal_peak_population_histogram.pdf")

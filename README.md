@@ -198,9 +198,11 @@ source("create_tikal_plots.R")
 ```
 
 This will generate the following files:
+-    outputs/loo_summary.yaml
 -    outputs/FigS3_tikal_loo.pdf
 -    outputs/Fig4_tikal_inference.pdf
 -    outputs/Fig5_tikal_prev_expert_comparison.pdf
+-    outputs/tpeak_summary.yaml
 -    outputs/Fig6_tikal_peak_population_histogram.pdf
 
 ## If running in a Docker container, copy results to /data

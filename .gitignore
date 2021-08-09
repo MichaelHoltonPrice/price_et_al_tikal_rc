@@ -83,7 +83,9 @@ outputs/tikal_K13.rds
 outputs/tikal_K14.rds
 
 # Outputs of create_maya_plots.R
+outputs/loo_summary.yaml
 outputs/FigS3_tikal_loo.pdf
 outputs/Fig4_tikal_inference.pdf
 outputs/Fig5_tikal_prev_expert_comparison.pdf
+outputs/tpeak_summary.yaml
 outputs/Fig6_tikal_peak_population_histogram.pdf
