@@ -7,7 +7,7 @@ if (dir.exists(snapshot_dir)) {
 
 # Create the snapshot directory
 dir.create(snapshot_dir)
-results_dir <- file.path(snapshot_dir,"results")
+results_dir <- file.path(snapshot_dir,"outputs")
 dir.create(results_dir)
 
 # Copy the results folder
